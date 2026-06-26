@@ -119,16 +119,36 @@ export function ProteinSearchPage() {
         scrollPosition: 0,
       });
       setHistory(loadHistory());
+      // 保存状态以支持页面刷新恢复
+      saveProteinSearchState({
+        query: selectedProtein.gene || selectedProtein.accession,
+        taxId: selectedProtein.taxId,
+        selectedProtein,
+        pdbResults: structures,
+        sortState: {},
+        filterState: {},
+        scrollPosition: 0,
+      });
     }
     prevPhaseRef.current = phase;
   }, [phase, selectedProtein, structures]);
 
   const handleRestore = useCallback((entry: SearchHistoryEntry) => {
     pdbAbortRef.current?.abort();
-    setSelectedProtein({ accession: entry.protein.accession, uniProtId: entry.protein.accession, name: entry.protein.name, gene: entry.protein.gene, aliases: entry.protein.aliases, organism: entry.protein.organism, taxId: entry.taxId, length: entry.protein.length, cofactors: [] });
+    const protein = { accession: entry.protein.accession, uniProtId: entry.protein.accession, name: entry.protein.name, gene: entry.protein.gene, aliases: entry.protein.aliases, organism: entry.protein.organism, taxId: entry.taxId, length: entry.protein.length, cofactors: [] };
+    setSelectedProtein(protein);
     setStructures(entry.pdbResults);
     setPhase('results');
     setHistoryOpen(false);
+    saveProteinSearchState({
+      query: entry.query,
+      taxId: entry.taxId,
+      selectedProtein: protein,
+      pdbResults: entry.pdbResults,
+      sortState: entry.sortState,
+      filterState: entry.filterState,
+      scrollPosition: 0,
+    });
   }, []);
 
   const handleDelete = useCallback((id: string) => { deleteHistory(id); setHistory(loadHistory()); }, []);

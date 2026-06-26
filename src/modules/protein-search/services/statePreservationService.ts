@@ -19,16 +19,14 @@ export function saveProteinSearchState(state: ProteinSearchState): void {
 
 /**
  * 恢复之前保存的 protein-search 状态
- * 读取后自动清除，避免过期状态残留
+ * 不删除 — 保留以支持页面刷新恢复
  */
 export function restoreProteinSearchState(): ProteinSearchState | null {
   try {
     const raw = localStorage.getItem(STATE_KEY);
-    localStorage.removeItem(STATE_KEY);
     if (!raw) return null;
     return JSON.parse(raw) as ProteinSearchState;
   } catch {
-    localStorage.removeItem(STATE_KEY);
     return null;
   }
 }
