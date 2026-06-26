@@ -4,6 +4,7 @@ import { UniProtSuggestions } from '../components/UniProtSuggestions';
 import { PdbResultTable } from '../components/PdbResultTable';
 import { searchProteins, getProteinDetail } from '../services/uniprotService';
 import { searchPdbByUniprot, getPdbStructures } from '../services/rcsbService';
+import { classifyStructureLigands, sortByPriority } from '../utils/tableSortUtils';
 import type { UniProtCandidate, PdbStructure } from '../../shared/types';
 
 /** 搜索阶段 */
@@ -91,7 +92,13 @@ export function ProteinSearchPage() {
       );
 
       if (pdbController.signal.aborted) return;
-      setStructures(structs);
+
+      // 配体分类 + 按纯度排序
+      const classified = structs.map((s) =>
+        classifyStructureLigands(s, cofactors),
+      );
+      const sorted = sortByPriority(classified);
+      setStructures(sorted);
       setPhase('results');
     } catch (err) {
       if (pdbController.signal.aborted) return;

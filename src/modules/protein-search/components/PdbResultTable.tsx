@@ -1,5 +1,15 @@
 import { useNavigate } from 'react-router-dom';
 import type { PdbStructure, UniProtCandidate } from '../../shared/types';
+import { LigandCell } from './LigandCell';
+import { computeSortPriority } from '../utils/tableSortUtils';
+
+/** 优先级标签 */
+const PRIORITY_LABEL: Record<string, { text: string; emoji: string; color: string }> = {
+  apo: { text: 'apo', emoji: '🟢', color: '#16a34a' },
+  holo_cofactor: { text: '辅因子', emoji: '🔵', color: '#3b82f6' },
+  inhibited: { text: '抑制剂', emoji: '🔴', color: '#ef4444' },
+  unknown: { text: '未知', emoji: '⚪', color: '#6b7280' },
+};
 
 interface PdbResultTableProps {
   structures: PdbStructure[];
@@ -9,8 +19,8 @@ interface PdbResultTableProps {
 }
 
 /**
- * PDB 结构结果表格
- * 列: PDB ID | 结构范围 | 文献 DOI | 配体 | 文献分析
+ * PDB 结构结果表格（按配体纯度排序）
+ * 列: 优先级 | PDB ID | 结构范围 | 文献 DOI | 配体 | 文献分析
  */
 export function PdbResultTable({
   structures,
@@ -54,6 +64,7 @@ export function PdbResultTable({
       >
         <thead>
           <tr style={{ background: '#f3f4f6' }}>
+            <Th style={{ width: 60 }}>纯度</Th>
             <Th>PDB ID</Th>
             <Th>结构范围</Th>
             <Th>文献</Th>
@@ -62,66 +73,93 @@ export function PdbResultTable({
           </tr>
         </thead>
         <tbody>
-          {structures.map((s) => (
-            <tr
-              key={s.pdbId}
-              style={{ borderBottom: '1px solid var(--color-border)' }}
-            >
-              <Td>
-                <a
-                  href={`https://www.rcsb.org/structure/${s.pdbId}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{ color: 'var(--color-primary)', textDecoration: 'none', fontWeight: 600, fontFamily: 'monospace' }}
-                >
-                  {s.pdbId}
-                </a>
-              </Td>
-
-              <Td>
-                <StructureRange coverage={s.coverage} resolution={s.resolution} />
-              </Td>
-
-              <Td>
-                {s.doi ? (
-                  <a
-                    href={`https://doi.org/${s.doi}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{ color: 'var(--color-primary)', textDecoration: 'none', fontFamily: 'monospace', fontSize: '0.85rem' }}
-                  >
-                    {s.doi}
-                  </a>
-                ) : (
-                  <span style={{ color: '#9ca3af' }}>-</span>
-                )}
-              </Td>
-
-              <Td>
-                <LigandCell ligands={s.ligands} />
-              </Td>
-
-              <Td>
-                {s.doi ? (
-                  <button
-                    onClick={() => handleAnalyze(s.doi!, s.pdbId)}
-                    title="在文献分析模块中打开"
+          {structures.map((s) => {
+            const priority = computeSortPriority(s);
+            const badge = PRIORITY_LABEL[priority];
+            return (
+              <tr
+                key={s.pdbId}
+                style={{ borderBottom: '1px solid var(--color-border)' }}
+              >
+                <Td>
+                  <span
+                    title={badge.text}
                     style={{
-                      background: 'none',
-                      border: 'none',
-                      cursor: 'pointer',
-                      fontSize: '1.2rem',
-                      padding: '4px 8px',
+                      fontSize: '0.85rem',
+                      fontWeight: 600,
+                      color: badge.color,
                     }}
                   >
-                    📄
-                  </button>
-                ) : (
-                  <span style={{ color: '#d1d5db' }}>—</span>
-                )}
-              </Td>
-            </tr>
-          ))}
+                    {badge.emoji}
+                  </span>
+                </Td>
+
+                <Td>
+                  <a
+                    href={`https://www.rcsb.org/structure/${s.pdbId}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      color: 'var(--color-primary)',
+                      textDecoration: 'none',
+                      fontWeight: 600,
+                      fontFamily: 'monospace',
+                    }}
+                  >
+                    {s.pdbId}
+                  </a>
+                </Td>
+
+                <Td>
+                  <StructureRange coverage={s.coverage} resolution={s.resolution} />
+                </Td>
+
+                <Td>
+                  {s.doi ? (
+                    <a
+                      href={`https://doi.org/${s.doi}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        color: 'var(--color-primary)',
+                        textDecoration: 'none',
+                        fontFamily: 'monospace',
+                        fontSize: '0.85rem',
+                      }}
+                    >
+                      {s.doi}
+                    </a>
+                  ) : (
+                    <span style={{ color: '#9ca3af' }}>-</span>
+                  )}
+                </Td>
+
+                <Td>
+                  <LigandCell ligands={s.ligands} />
+                </Td>
+
+                <Td>
+                  {s.doi ? (
+                    <button
+                      onClick={() => handleAnalyze(s.doi!, s.pdbId)}
+                      title="在文献分析模块中打开"
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        fontSize: '1.2rem',
+                        padding: '4px 8px',
+                      }}
+                    >
+                      📄
+                    </button>
+                  ) : (
+                    <span style={{ color: '#d1d5db' }}>—</span>
+                  )}
+                </Td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>
@@ -129,7 +167,13 @@ export function PdbResultTable({
 }
 
 /** 表头单元格 */
-function Th({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
+function Th({
+  children,
+  style,
+}: {
+  children: React.ReactNode;
+  style?: React.CSSProperties;
+}) {
   return (
     <th
       style={{
@@ -169,11 +213,16 @@ function StructureRange({
   return (
     <div>
       {coverage.map((c, i) => (
-        <div key={i} style={{ marginBottom: i < coverage.length - 1 ? '0.25rem' : 0 }}>
+        <div
+          key={i}
+          style={{ marginBottom: i < coverage.length - 1 ? '0.25rem' : 0 }}
+        >
           <span style={{ fontFamily: 'monospace', fontWeight: 500 }}>
             Chain {c.chainId}
           </span>
-          <span style={{ color: 'var(--color-text-secondary)', marginLeft: '0.5rem' }}>
+          <span
+            style={{ color: 'var(--color-text-secondary)', marginLeft: '0.5rem' }}
+          >
             {c.organism}
           </span>
           {c.features.length > 0 && (
@@ -184,39 +233,12 @@ function StructureRange({
         </div>
       ))}
       {resolution && (
-        <div style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '0.15rem' }}>
+        <div
+          style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '0.15rem' }}
+        >
           {resolution.toFixed(2)} Å
         </div>
       )}
-    </div>
-  );
-}
-
-/** 配体列 */
-function LigandCell({ ligands }: { ligands: PdbStructure['ligands'] }) {
-  if (ligands.length === 0) {
-    return <span style={{ color: '#9ca3af' }}>-</span>;
-  }
-
-  return (
-    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem' }}>
-      {ligands.map((l) => (
-        <span
-          key={l.entityId}
-          title={`${l.compId}: ${l.name}`}
-          style={{
-            display: 'inline-block',
-            padding: '2px 6px',
-            borderRadius: '4px',
-            fontSize: '0.8rem',
-            fontFamily: 'monospace',
-            background: '#e5e7eb',
-            color: '#374151',
-          }}
-        >
-          {l.compId}
-        </span>
-      ))}
     </div>
   );
 }
