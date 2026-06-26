@@ -2,8 +2,20 @@ import { useEffect, useRef, useState } from 'react';
 import styles from './SearchBar.module.css';
 
 const SPECIES = [
-  { label: 'Human', taxId: 9606 },
-  { label: 'Mouse', taxId: 10090 },
+  { label: '全部物种', taxId: 0 },
+  { label: 'Homo sapiens (Human)', taxId: 9606 },
+  { label: 'Mus musculus (Mouse)', taxId: 10090 },
+  { label: 'Rattus norvegicus (Rat)', taxId: 10116 },
+  { label: 'Bos taurus (Cow)', taxId: 9913 },
+  { label: 'Sus scrofa (Pig)', taxId: 9823 },
+  { label: 'Gallus gallus (Chicken)', taxId: 9031 },
+  { label: 'Danio rerio (Zebrafish)', taxId: 7955 },
+  { label: 'Drosophila melanogaster (Fruit fly)', taxId: 7227 },
+  { label: 'Caenorhabditis elegans (Nematode)', taxId: 6239 },
+  { label: 'Saccharomyces cerevisiae (Yeast)', taxId: 4932 },
+  { label: 'Escherichia coli (E. coli)', taxId: 83333 },
+  { label: 'Arabidopsis thaliana', taxId: 3702 },
+  { label: 'Xenopus laevis (Frog)', taxId: 8355 },
 ] as const;
 
 interface SearchBarProps {
