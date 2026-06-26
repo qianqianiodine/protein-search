@@ -35,7 +35,6 @@ export function ProteinSearchPage() {
   const [pdbProgress, setPdbProgress] = useState({ done: 0, total: 0 });
   const [history, setHistory] = useState<SearchHistoryEntry[]>([]);
   const [historyOpen, setHistoryOpen] = useState(false);
-  const [currentQuery, setCurrentQuery] = useState('');
 
   const uniprotAbortRef = useRef<AbortController | null>(null);
   const pdbAbortRef = useRef<AbortController | null>(null);
@@ -61,7 +60,6 @@ export function ProteinSearchPage() {
     setError(null);
     setSelectedProtein(null);
     setStructures([]);
-    setCurrentQuery(query);
     try {
       const results = await searchProteins(query, taxId, controller.signal);
       if (controller.signal.aborted) return;
@@ -191,7 +189,7 @@ export function ProteinSearchPage() {
       <div style={{ ...card, ...mb }}>
         <SearchBar onSearch={handleSearch} disabled={phase === 'loading_pdb'} />
         {(phase === 'searching_uniprot' || phase === 'suggestions') && (
-          <UniProtSuggestions candidates={candidates} loading={phase === 'searching_uniprot'} onSelect={handleSelectProtein} query={currentQuery} />
+          <UniProtSuggestions candidates={candidates} loading={phase === 'searching_uniprot'} onSelect={handleSelectProtein} />
         )}
         {error && <div style={errBox}>{error}</div>}
       </div>
