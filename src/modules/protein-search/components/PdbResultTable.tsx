@@ -40,6 +40,9 @@ export function PdbResultTable({
 
   if (structures.length === 0) return null;
 
+  // 计算 DOI 分组合并信息
+  const doiGroups = buildDoiGroups(structures);
+
   const handleAnalyze = (doi: string, pdbId: string) => {
     onBeforeAnalyze?.();
     const params = new URLSearchParams({ doi, pdb: pdbId, uniprot: selectedProtein.accession });
@@ -60,9 +63,10 @@ export function PdbResultTable({
           </tr>
         </thead>
         <tbody className={styles.tbody}>
-          {structures.map((s) => {
+          {structures.map((s, idx) => {
             const priority = computeSortPriority(s);
             const badge = PRIORITY_LABEL[priority];
+            const dg = doiGroups[idx];
             return (
               <tr key={s.pdbId}>
                 <td className={styles.td}>
@@ -96,20 +100,23 @@ export function PdbResultTable({
                     <div className={styles.resolution}>{s.resolution.toFixed(2)} Å</div>
                   )}
                 </td>
-                <td className={styles.td}>
-                  {s.doi ? (
-                    <a
-                      className={styles.doiLink}
-                      href={`https://doi.org/${s.doi}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      {s.doi}
-                    </a>
-                  ) : (
-                    <span style={{ color: 'var(--color-text-muted)' }}>-</span>
-                  )}
-                </td>
+                {/* DOI 列 — 仅首行渲染，带 rowSpan 合并 */}
+                {dg.showDoi && (
+                  <td className={styles.td} rowSpan={dg.rowSpan}>
+                    {s.doi ? (
+                      <a
+                        className={styles.doiLink}
+                        href={`https://doi.org/${s.doi}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        {s.doi}
+                      </a>
+                    ) : (
+                      <span style={{ color: 'var(--color-text-muted)' }}>-</span>
+                    )}
+                  </td>
+                )}
                 <td className={styles.td}>
                   <LigandCell ligands={s.ligands} />
                 </td>
@@ -133,4 +140,30 @@ export function PdbResultTable({
       </table>
     </div>
   );
+}
+
+/** 计算 DOI 列 rowspan 合并信息 */
+function buildDoiGroups(structures: PdbStructure[]): Array<{ showDoi: boolean; rowSpan: number }> {
+  const groups: Array<{ showDoi: boolean; rowSpan: number }> = [];
+  let i = 0;
+  while (i < structures.length) {
+    const doi = structures[i].doi;
+    if (!doi) {
+      // 无 DOI — 每行独立
+      groups.push({ showDoi: true, rowSpan: 1 });
+      i++;
+      continue;
+    }
+    // 统计连续相同 DOI 的行数
+    let count = 1;
+    while (i + count < structures.length && structures[i + count].doi === doi) {
+      count++;
+    }
+    groups.push({ showDoi: true, rowSpan: count });
+    for (let j = 1; j < count; j++) {
+      groups.push({ showDoi: false, rowSpan: 0 });
+    }
+    i += count;
+  }
+  return groups;
 }

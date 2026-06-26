@@ -40,14 +40,21 @@ const PRIORITY_ORDER: Record<SortPriority, number> = {
   unknown: 3,
 };
 
-/** 按排序优先级排列 PDB 结构（不修改原数组） */
+/** 按排序优先级 + DOI 分组排列 PDB 结构 */
 export function sortByPriority(
   structures: PdbStructure[],
 ): PdbStructure[] {
   return [...structures].sort((a, b) => {
     const pa = PRIORITY_ORDER[computeSortPriority(a)];
     const pb = PRIORITY_ORDER[computeSortPriority(b)];
-    return pa - pb;
+    if (pa !== pb) return pa - pb;
+    // 同优先级内按 DOI 分组（相同 DOI 排一起，无 DOI 排最后）
+    const da = a.doi || '';
+    const db = b.doi || '';
+    if (da && db) return da.localeCompare(db);
+    if (da) return -1;
+    if (db) return 1;
+    return 0;
   });
 }
 
