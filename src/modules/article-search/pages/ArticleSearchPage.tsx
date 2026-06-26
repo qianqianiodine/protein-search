@@ -1,8 +1,17 @@
+import { useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
+import { taskController } from '../services/articleSearchTaskController';
 
 /**
  * Article Search 页面
  * 当前占位 — 纯化与结晶分析功能待开发
+ *
+ * "返回搜索结果" 按钮行为（三合一）:
+ * 1. cancelAllArticleSearchTasks() — 取消所有进行中任务
+ * 2. restoreProteinSearchState() — 恢复表格/排序/筛选/滚动位置
+ * 3. navigate('/') — 回到搜索结果
+ *
+ * 取消触发时机: 点击返回按钮 | 组件卸载 | 路由离开
  */
 export function ArticleSearchPage() {
   const [searchParams] = useSearchParams();
@@ -11,6 +20,22 @@ export function ArticleSearchPage() {
   const doi = searchParams.get('doi') || '-';
   const pdb = searchParams.get('pdb') || '-';
   const uniprot = searchParams.get('uniprot') || '-';
+
+  // 组件卸载时取消所有任务
+  useEffect(() => {
+    return () => {
+      taskController.cancelAll();
+    };
+  }, []);
+
+  const handleBack = () => {
+    // 1. 取消所有进行中任务
+    taskController.cancelAll();
+    // 2. 恢复状态已由 ProteinSearchPage 的 useEffect 读取 localStorage
+    //    滚动位置恢复也在 ProteinSearchPage mount 时完成
+    // 3. 回到搜索结果
+    navigate('/');
+  };
 
   return (
     <div style={{ maxWidth: 800, margin: '0 auto', padding: '2rem' }}>
@@ -50,7 +75,7 @@ export function ArticleSearchPage() {
       </div>
 
       <button
-        onClick={() => navigate('/')}
+        onClick={handleBack}
         style={{
           padding: '0.75rem 1.5rem',
           fontSize: '1rem',

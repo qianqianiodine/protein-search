@@ -12,6 +12,11 @@ import {
   deleteHistory,
   generateId,
 } from '../services/searchHistoryService';
+import {
+  saveProteinSearchState,
+  restoreProteinSearchState,
+  restoreScrollPosition,
+} from '../services/statePreservationService';
 import type { UniProtCandidate, PdbStructure, SearchHistoryEntry } from '../../shared/types';
 
 /** 搜索阶段 */
@@ -46,6 +51,17 @@ export function ProteinSearchPage() {
   // 初始化加载历史
   useEffect(() => {
     setHistory(loadHistory());
+  }, []);
+
+  // 从 article-search 返回时恢复状态
+  useEffect(() => {
+    const saved = restoreProteinSearchState();
+    if (saved?.selectedProtein && saved.pdbResults.length > 0) {
+      setSelectedProtein(saved.selectedProtein);
+      setStructures(saved.pdbResults);
+      setPhase('results');
+      restoreScrollPosition(saved.scrollPosition);
+    }
   }, []);
 
   /** 搜索 UniProt */
@@ -172,6 +188,21 @@ export function ProteinSearchPage() {
     deleteHistory(id);
     setHistory(loadHistory());
   }, []);
+
+  /** 跳转 article-search 前保存当前状态 */
+  const handleBeforeAnalyze = useCallback(() => {
+    if (selectedProtein) {
+      saveProteinSearchState({
+        query: selectedProtein.gene || selectedProtein.accession,
+        taxId: selectedProtein.taxId,
+        selectedProtein,
+        pdbResults: structures,
+        sortState: {},
+        filterState: {},
+        scrollPosition: window.scrollY,
+      });
+    }
+  }, [selectedProtein, structures]);
 
   return (
     <div style={{ maxWidth: 1200, margin: '0 auto', padding: '2rem' }}>
@@ -311,6 +342,7 @@ export function ProteinSearchPage() {
             selectedProtein={selectedProtein}
             loading={phase === 'loading_pdb'}
             progress={pdbProgress}
+            onBeforeAnalyze={handleBeforeAnalyze}
           />
         </div>
       )}

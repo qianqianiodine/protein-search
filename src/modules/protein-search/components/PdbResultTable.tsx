@@ -16,6 +16,7 @@ interface PdbResultTableProps {
   selectedProtein: UniProtCandidate;
   loading: boolean;
   progress?: { done: number; total: number };
+  onBeforeAnalyze?: () => void;
 }
 
 /**
@@ -27,6 +28,7 @@ export function PdbResultTable({
   selectedProtein,
   loading,
   progress,
+  onBeforeAnalyze,
 }: PdbResultTableProps) {
   const navigate = useNavigate();
 
@@ -45,6 +47,7 @@ export function PdbResultTable({
   }
 
   const handleAnalyze = (doi: string, pdbId: string) => {
+    onBeforeAnalyze?.();
     const params = new URLSearchParams({
       doi,
       pdb: pdbId,
