@@ -29,7 +29,7 @@ export async function searchPdbByUniprot(
           type: 'terminal',
           service: 'text',
           parameters: {
-            attribute: 'rcsb_uniprot_protein.name.value',
+            attribute: 'rcsb_polymer_entity_container_identifiers.reference_sequence_identifiers.database_accession',
             operator: 'exact_match',
             value: uniprotAccession,
           },
