@@ -50,6 +50,12 @@ export async function searchPdbByUniprot(
       ],
     },
     return_type: 'entry',
+    request_options: {
+      paginate: {
+        start: 0,
+        rows: 1000,
+      },
+    },
   };
 
   const data = await apiFetch<RcsbSearchResponse>(RCSB_SEARCH, {
@@ -112,31 +118,31 @@ async function getSinglePdbStructure(
     { signal },
   );
 
-  const polymerCount =
-    entry.rcsb_entry_info?.deposited_polymer_entity_instance_count || 0;
-  const nonpolymerCount =
-    entry.rcsb_entry_info?.deposited_nonpolymer_entity_instance_count || 0;
+  const polymerIds =
+    entry.rcsb_entry_container_identifiers?.polymer_entity_ids || [];
+  const nonPolymerIds =
+    entry.rcsb_entry_container_identifiers?.non_polymer_entity_ids || [];
 
-  // 2. 构建所有 entity ID 列表，一次性全并行获取
+  // 2. 构建所有 entity 请求，一次性全并行发出
   const entityFetches: Promise<unknown>[] = [];
-  const polymerIndices: number[] = []; // 记录哪些是 polymer entity
-  const nonpolymerIndices: number[] = []; // 记录哪些是 nonpolymer entity
+  const polymerIndices: number[] = [];
+  const nonpolymerIndices: number[] = [];
 
-  for (let e = 1; e <= polymerCount; e++) {
+  for (const eid of polymerIds) {
     polymerIndices.push(entityFetches.length);
     entityFetches.push(
       apiFetch<RcsbPolymerEntityResponse>(
-        `${RCSB_DATA}/polymer_entity/${pdbId}/${e}`,
+        `${RCSB_DATA}/polymer_entity/${pdbId}/${eid}`,
         { signal },
       ).catch(() => null),
     );
   }
 
-  for (let e = polymerCount + 1; e <= polymerCount + nonpolymerCount; e++) {
+  for (const eid of nonPolymerIds) {
     nonpolymerIndices.push(entityFetches.length);
     entityFetches.push(
       apiFetch<RcsbNonpolymerEntityResponse>(
-        `${RCSB_DATA}/nonpolymer_entity/${pdbId}/${e}`,
+        `${RCSB_DATA}/nonpolymer_entity/${pdbId}/${eid}`,
         { signal },
       ).catch(() => null),
     );

@@ -1,0 +1,10 @@
+.cell {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+}
+
+.empty {
+  color: var(--color-text-muted);
+}

@@ -146,6 +146,10 @@ export interface RcsbEntryResponse {
     deposited_polymer_entity_instance_count?: number;
     deposited_nonpolymer_entity_instance_count?: number;
   };
+  rcsb_entry_container_identifiers?: {
+    polymer_entity_ids?: string[];
+    non_polymer_entity_ids?: string[];
+  };
   rcsb_accession_info?: {
     initial_release_date?: string;
   };
