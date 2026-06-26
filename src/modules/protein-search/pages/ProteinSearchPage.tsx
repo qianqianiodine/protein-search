@@ -58,6 +58,8 @@ export function ProteinSearchPage() {
     setPhase('searching_uniprot');
     setCandidates([]);
     setError(null);
+    setSelectedProtein(null);
+    setStructures([]);
     try {
       const results = await searchProteins(query, taxId, controller.signal);
       if (controller.signal.aborted) return;
