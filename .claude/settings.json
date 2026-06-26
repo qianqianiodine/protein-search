@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "npm run dev",
+      "npm run build",
+      "npm install",
+      "git init",
+      "git add",
+      "git commit",
+      "git status",
+      "git log",
+      "git diff",
+      "mkdir",
+      "rm"
+    ],
+    "deny": []
+  }
+}
