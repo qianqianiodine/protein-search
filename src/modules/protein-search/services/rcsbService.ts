@@ -106,17 +106,20 @@ export async function getPdbStructures(
 
 /**
  * 获取单个 PDB 结构详情
- * Entry → 一次性并行获取所有 entities (polymer + nonpolymer)
+ * Entry + binding affinity (并行) → 一次性并行获取所有 entities (polymer + nonpolymer)
  */
 async function getSinglePdbStructure(
   pdbId: string,
   signal?: AbortSignal,
 ): Promise<PdbStructure> {
-  // 1. 获取 entry 元数据
-  const entry = await apiFetch<RcsbEntryResponse>(
-    `${RCSB_DATA}/entry/${pdbId}`,
-    { signal },
-  );
+  // 1. 并行获取 entry 元数据 + binding affinity
+  const [entry, bindingAffinityCompIds] = await Promise.all([
+    apiFetch<RcsbEntryResponse>(
+      `${RCSB_DATA}/entry/${pdbId}`,
+      { signal },
+    ),
+    fetchBindingAffinity(pdbId, signal).catch(() => new Set<string>()),
+  ]);
 
   const polymerIds =
     entry.rcsb_entry_container_identifiers?.polymer_entity_ids || [];
@@ -184,6 +187,9 @@ async function getSinglePdbStructure(
     doi: entry.rcsb_primary_citation?.pdbx_database_id_DOI || null,
     organism:
       entry.rcsb_entity_source_organism?.[0]?.ncbi_scientific_name || '-',
+    bindingAffinityCompIds: bindingAffinityCompIds.size > 0
+      ? [...bindingAffinityCompIds]
+      : undefined,
   };
 }
 
@@ -228,6 +234,29 @@ function parsePolymerEntity(poly: RcsbPolymerEntityResponse): EntityCoverage {
     features,
     coverageRatio,
   };
+}
+
+/**
+ * 查询 RCSB GraphQL 获取 binding affinity 数据
+ * 返回有 Ki/Kd/IC50/EC50 数据的 comp_id 集合
+ */
+async function fetchBindingAffinity(
+  pdbId: string,
+  signal?: AbortSignal,
+): Promise<Set<string>> {
+  const body = {
+    query: `query{entry(entry_id:"${pdbId}"){rcsb_binding_affinity{comp_id}}}`,
+  };
+  const data = await apiFetch<{
+    data: { entry: { rcsb_binding_affinity?: Array<{ comp_id: string }> } };
+  }>('https://data.rcsb.org/graphql', {
+    method: 'POST',
+    body,
+    signal,
+  });
+  return new Set(
+    data.data.entry.rcsb_binding_affinity?.map((b) => b.comp_id) ?? [],
+  );
 }
 
 /**

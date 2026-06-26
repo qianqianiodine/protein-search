@@ -71,7 +71,11 @@ export function classifyStructureLigands(
     name: l.name,
   }));
 
-  const classified = classifyLigands(ligands, uniprotCofactors);
+  const bindingAffinitySet = structure.bindingAffinityCompIds
+    ? new Set(structure.bindingAffinityCompIds)
+    : undefined;
+
+  const classified = classifyLigands(ligands, uniprotCofactors, bindingAffinitySet);
 
   return {
     ...structure,

@@ -40,6 +40,8 @@ export interface PdbStructure {
   doi: string | null;                 // rcsb_primary_citation.pdbx_database_id_DOI
   /** 生物来源 */
   organism: string;                   // rcsb_entity_source_organism[0].ncbi_scientific_name
+  /** 有 binding affinity 数据的 comp_id 列表（用于抑制剂判定） */
+  bindingAffinityCompIds?: string[];
 }
 
 /** 单个 polymer entity 的结构覆盖信息 */
@@ -80,13 +82,13 @@ export type LigandClass =
   | 'metal'          // 🟡 金属离子
   | 'unknown';       // ⚪ 无法判断
 
-/** 配体分类颜色映射 */
+/** 配体分类颜色映射 — 莫兰迪色系 */
 export const LIGAND_COLORS: Record<LigandClass, string> = {
-  cofactor: '#3b82f6',  // 蓝
-  inhibitor: '#ef4444', // 红
-  crystal: '#9ca3af',   // 灰
-  metal: '#eab308',     // 黄
-  unknown: '#6b7280',   // 深灰
+  cofactor:  '#7D9DB5',  // 灰蓝
+  inhibitor: '#C49B9B',  // 灰玫瑰
+  crystal:   '#9EAE9A',  // 灰绿
+  metal:     '#C4B89A',  // 灰金
+  unknown:   '#9E9792',  // 暖灰
 };
 
 /** PDB 结构排序优先级 */

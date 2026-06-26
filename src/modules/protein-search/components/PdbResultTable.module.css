@@ -6,6 +6,9 @@
   width: 100%;
   border-collapse: collapse;
   font-size: var(--text-sm);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
 }
 
 /* Sticky header */
@@ -23,25 +26,40 @@
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--color-text-secondary);
-  background: #f1f5f9;
+  background: #EAF0F6;
   border-bottom: 2px solid var(--color-border);
+  border-right: 1px solid var(--color-border);
   white-space: nowrap;
   user-select: none;
+}
+
+.th:last-child {
+  border-right: none;
 }
 
 .td {
   padding: var(--space-md);
   vertical-align: top;
   border-bottom: 1px solid var(--color-border);
+  border-right: 1px solid var(--color-border);
+}
+
+.td:last-child {
+  border-right: none;
+}
+
+/* DOI 合并单元格垂直居中 */
+.doiCell {
+  vertical-align: middle !important;
 }
 
 /* Zebra striping + hover */
 .tbody tr:nth-child(even) {
-  background: #f8fafc;
+  background: #F9FAFB;
 }
 
 .tbody tr:hover {
-  background: #eff6ff;
+  background: #EDF3F8;
 }
 
 /* PDB ID link */

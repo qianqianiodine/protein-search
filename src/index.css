@@ -12,16 +12,16 @@
 }
 
 :root {
-  /* Colors */
-  --color-primary:       #2563eb;
-  --color-primary-hover: #1d4ed8;
-  --color-primary-light: #eff6ff;
-  --color-bg:            #f8fafc;
+  /* Colors — 学术蓝灰调 */
+  --color-primary:       #4A7DAD;
+  --color-primary-hover: #3A6590;
+  --color-primary-light: #EDF3F8;
+  --color-bg:            #F5F7FA;
   --color-surface:       #ffffff;
-  --color-border:         #e2e8f0;
-  --color-text:           #1e293b;
-  --color-text-secondary: #64748b;
-  --color-text-muted:     #94a3b8;
+  --color-border:         #DDE3EA;
+  --color-text:           #2C3E50;
+  --color-text-secondary: #7F8C9A;
+  --color-text-muted:     #A0ACB8;
 
   /* Semantic */
   --color-danger:     #ef4444;

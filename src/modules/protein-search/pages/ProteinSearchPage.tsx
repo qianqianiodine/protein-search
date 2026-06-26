@@ -187,8 +187,8 @@ export function ProteinSearchPage() {
             {selectedProtein.organism} · {selectedProtein.length} aa
           </span>
           {selectedProtein.cofactors.length > 0 && (
-            <span style={{ fontSize: 'var(--text-sm)', color: '#3b82f6' }}>
-              辅因子: {selectedProtein.cofactors.map((c) => c.name).join(', ')}
+            <span style={{ fontSize: 'var(--text-sm)', color: 'var(--color-primary)' }}>
+             辅因子: {selectedProtein.cofactors.map((c) => c.name).join(', ')}
             </span>
           )}
         </div>

@@ -102,7 +102,7 @@ export function PdbResultTable({
                 </td>
                 {/* DOI 列 — 仅首行渲染，带 rowSpan 合并 */}
                 {dg.showDoi && (
-                  <td className={styles.td} rowSpan={dg.rowSpan}>
+                  <td className={`${styles.td} ${styles.doiCell}`} rowSpan={dg.rowSpan}>
                     {s.doi ? (
                       <a
                         className={styles.doiLink}
