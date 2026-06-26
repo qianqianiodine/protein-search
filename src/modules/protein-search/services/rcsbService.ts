@@ -162,12 +162,12 @@ async function getSinglePdbStructure(
   const ligands: LigandSummary[] = [];
   for (const idx of nonpolymerIndices) {
     const nonpoly = allResults[idx] as RcsbNonpolymerEntityResponse | null;
-    if (nonpoly?.nonpolymer_comp?.comp_id) {
+    if (nonpoly?.pdbx_entity_nonpoly?.comp_id) {
       ligands.push({
         entityId:
           nonpoly.rcsb_nonpolymer_entity_container_identifiers?.entity_id || 0,
-        compId: nonpoly.nonpolymer_comp.comp_id,
-        name: nonpoly.nonpolymer_comp.name || nonpoly.nonpolymer_comp.comp_id,
+        compId: nonpoly.pdbx_entity_nonpoly.comp_id,
+        name: nonpoly.pdbx_entity_nonpoly.name || nonpoly.pdbx_entity_nonpoly.comp_id,
         classification: 'unknown',
       });
     }

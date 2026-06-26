@@ -187,7 +187,7 @@ export interface RcsbPolymerEntityResponse {
 }
 
 export interface RcsbNonpolymerEntityResponse {
-  nonpolymer_comp?: {
+  pdbx_entity_nonpoly?: {
     comp_id?: string;
     name?: string;
   };
