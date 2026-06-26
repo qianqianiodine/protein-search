@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { PdbStructure, UniProtCandidate } from '../../shared/types';
 import { LigandCell } from './LigandCell';
@@ -27,6 +28,7 @@ export function PdbResultTable({
   onBeforeAnalyze,
 }: PdbResultTableProps) {
   const navigate = useNavigate();
+  const [hoveredGroup, setHoveredGroup] = useState<number | null>(null);
 
   if (loading && structures.length === 0) {
     return (
@@ -68,7 +70,12 @@ export function PdbResultTable({
             const badge = PRIORITY_LABEL[priority];
             const dg = doiGroups[idx];
             return (
-              <tr key={s.pdbId}>
+              <tr
+                key={s.pdbId}
+                className={hoveredGroup === dg.groupId ? styles.rowHovered : undefined}
+                onMouseEnter={() => setHoveredGroup(dg.groupId)}
+                onMouseLeave={() => setHoveredGroup(null)}
+              >
                 <td className={styles.td}>
                   <span className={styles.priorityBadge} title={badge.text}>
                     {badge.emoji}
@@ -143,14 +150,15 @@ export function PdbResultTable({
 }
 
 /** 计算 DOI 列 rowspan 合并信息 */
-function buildDoiGroups(structures: PdbStructure[]): Array<{ showDoi: boolean; rowSpan: number }> {
-  const groups: Array<{ showDoi: boolean; rowSpan: number }> = [];
+function buildDoiGroups(structures: PdbStructure[]): Array<{ showDoi: boolean; rowSpan: number; groupId: number }> {
+  const groups: Array<{ showDoi: boolean; rowSpan: number; groupId: number }> = [];
   let i = 0;
+  let groupCounter = 0;
   while (i < structures.length) {
     const doi = structures[i].doi;
     if (!doi) {
-      // 无 DOI — 每行独立
-      groups.push({ showDoi: true, rowSpan: 1 });
+      // 无 DOI — 每行独立组
+      groups.push({ showDoi: true, rowSpan: 1, groupId: groupCounter++ });
       i++;
       continue;
     }
@@ -159,9 +167,10 @@ function buildDoiGroups(structures: PdbStructure[]): Array<{ showDoi: boolean; r
     while (i + count < structures.length && structures[i + count].doi === doi) {
       count++;
     }
-    groups.push({ showDoi: true, rowSpan: count });
+    const gid = groupCounter++;
+    groups.push({ showDoi: true, rowSpan: count, groupId: gid });
     for (let j = 1; j < count; j++) {
-      groups.push({ showDoi: false, rowSpan: 0 });
+      groups.push({ showDoi: false, rowSpan: 0, groupId: gid });
     }
     i += count;
   }

@@ -54,12 +54,17 @@
 }
 
 /* Zebra striping + hover */
+.tbody tr {
+  transition: background 120ms ease;
+}
+
 .tbody tr:nth-child(even) {
   background: #F9FAFB;
 }
 
-.tbody tr:hover {
-  background: #EDF3F8;
+.tbody tr:hover,
+.rowHovered {
+  background: #E5EEF6 !important;
 }
 
 /* PDB ID link */
