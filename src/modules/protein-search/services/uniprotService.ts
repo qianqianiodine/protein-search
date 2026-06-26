@@ -17,7 +17,7 @@ export async function searchProteins(
   signal?: AbortSignal,
 ): Promise<UniProtCandidate[]> {
   const taxFilter = taxId !== 0 ? `+AND+taxonomy_id:${taxId}` : '';
-  const url = `${UNIPROT_BASE}/search?query=${encodeURIComponent(query)}${taxFilter}&size=10&fields=accession,id,gene_names,protein_name,organism_name,length&sort=score`;
+  const url = `${UNIPROT_BASE}/search?query=${encodeURIComponent(query)}${taxFilter}&size=10&fields=accession,id,gene_names,protein_name,organism_name,length&sort=annotation_score+desc`;
   const data = await apiFetch<UniProtSearchResponse>(url, { signal });
 
   return data.results.map((r) => ({
