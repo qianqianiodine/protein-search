@@ -13,8 +13,8 @@ import type {
 const RCSB_SEARCH = 'https://search.rcsb.org/rcsbsearch/v2/query';
 const RCSB_DATA = 'https://data.rcsb.org/rest/v1/core';
 
-/** PDB 详情获取并发数 */
-const PDB_CONCURRENCY = 6;
+/** PDB 详情获取并发数 (HTTP/2 复用，可以开到 12) */
+const PDB_CONCURRENCY = 12;
 
 /**
  * 通过 UniProt accession 搜索 PDB 条目 (仅 X-ray)
@@ -62,7 +62,7 @@ export async function searchPdbByUniprot(
 }
 
 /**
- * 获取 PDB 条目详情（并发控制 + entity 级并行）
+ * 获取 PDB 条目详情（12 并发 + entity 全并行）
  */
 export async function getPdbStructures(
   pdbIds: string[],
@@ -90,7 +90,9 @@ export async function getPdbStructures(
   });
 
   if (errors.length > 0) {
-    console.warn(`[rcsbService] ${errors.length} PDB 获取失败: ${errors.join(', ')}`);
+    console.warn(
+      `[rcsbService] ${errors.length} PDB 获取失败: ${errors.join(', ')}`,
+    );
   }
 
   return results;
@@ -98,13 +100,13 @@ export async function getPdbStructures(
 
 /**
  * 获取单个 PDB 结构详情
- * Entry → 并行获取 polymer entities + nonpolymer entities
+ * Entry → 一次性并行获取所有 entities (polymer + nonpolymer)
  */
 async function getSinglePdbStructure(
   pdbId: string,
   signal?: AbortSignal,
 ): Promise<PdbStructure> {
-  // 1. 先获取 entry 元数据
+  // 1. 获取 entry 元数据
   const entry = await apiFetch<RcsbEntryResponse>(
     `${RCSB_DATA}/entry/${pdbId}`,
     { signal },
@@ -115,38 +117,45 @@ async function getSinglePdbStructure(
   const nonpolymerCount =
     entry.rcsb_entry_info?.deposited_nonpolymer_entity_instance_count || 0;
 
-  // 2. 并行获取所有 polymer entities
-  const polymerIds = Array.from({ length: polymerCount }, (_, i) => i + 1);
-  const polymerResults = await Promise.all(
-    polymerIds.map((e) =>
+  // 2. 构建所有 entity ID 列表，一次性全并行获取
+  const entityFetches: Promise<unknown>[] = [];
+  const polymerIndices: number[] = []; // 记录哪些是 polymer entity
+  const nonpolymerIndices: number[] = []; // 记录哪些是 nonpolymer entity
+
+  for (let e = 1; e <= polymerCount; e++) {
+    polymerIndices.push(entityFetches.length);
+    entityFetches.push(
       apiFetch<RcsbPolymerEntityResponse>(
         `${RCSB_DATA}/polymer_entity/${pdbId}/${e}`,
         { signal },
       ).catch(() => null),
-    ),
-  );
-
-  const coverages: EntityCoverage[] = [];
-  for (const poly of polymerResults) {
-    if (poly) coverages.push(parsePolymerEntity(poly));
+    );
   }
 
-  // 3. 并行获取所有 nonpolymer entities
-  const nonpolymerIds = Array.from(
-    { length: nonpolymerCount },
-    (_, i) => polymerCount + i + 1,
-  );
-  const nonpolymerResults = await Promise.all(
-    nonpolymerIds.map((e) =>
+  for (let e = polymerCount + 1; e <= polymerCount + nonpolymerCount; e++) {
+    nonpolymerIndices.push(entityFetches.length);
+    entityFetches.push(
       apiFetch<RcsbNonpolymerEntityResponse>(
         `${RCSB_DATA}/nonpolymer_entity/${pdbId}/${e}`,
         { signal },
       ).catch(() => null),
-    ),
-  );
+    );
+  }
 
+  // 全部 entity 请求同时发出
+  const allResults = await Promise.all(entityFetches);
+
+  // 3. 解析 polymer entities
+  const coverages: EntityCoverage[] = [];
+  for (const idx of polymerIndices) {
+    const poly = allResults[idx] as RcsbPolymerEntityResponse | null;
+    if (poly) coverages.push(parsePolymerEntity(poly));
+  }
+
+  // 4. 解析 nonpolymer entities
   const ligands: LigandSummary[] = [];
-  for (const nonpoly of nonpolymerResults) {
+  for (const idx of nonpolymerIndices) {
+    const nonpoly = allResults[idx] as RcsbNonpolymerEntityResponse | null;
     if (nonpoly?.nonpolymer_comp?.comp_id) {
       ligands.push({
         entityId:
@@ -193,8 +202,7 @@ function parsePolymerEntity(poly: RcsbPolymerEntityResponse): EntityCoverage {
   if (alignments.length > 0) {
     const fp = alignments[0].feature_positions || [];
     if (fp.length > 0) {
-      const seqLen =
-        poly.entity_poly?.rcsb_seq_one_letter_code?.length || 1;
+      const seqLen = poly.entity_poly?.rcsb_seq_one_letter_code?.length || 1;
       const covered = fp.reduce(
         (sum, f) => sum + ((f.end_seq_id || 0) - (f.beg_seq_id || 0) + 1),
         0,
