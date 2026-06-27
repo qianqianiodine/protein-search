@@ -6,11 +6,21 @@ export async function extractPdf(
   mainPdf: File,
   suppPdf?: File | null,
   signal?: AbortSignal,
+  metadata?: { doi?: string; pdb?: string; uniprot?: string },
 ): Promise<ArticleExtraction> {
   const formData = new FormData();
   formData.append('pdf', mainPdf);
   if (suppPdf) {
     formData.append('supp_pdf', suppPdf);
+  }
+  if (metadata?.doi) {
+    formData.append('doi', metadata.doi);
+  }
+  if (metadata?.pdb) {
+    formData.append('pdb', metadata.pdb);
+  }
+  if (metadata?.uniprot) {
+    formData.append('uniprot', metadata.uniprot);
   }
 
   const response = await fetch(`${API_BASE}/extract`, {

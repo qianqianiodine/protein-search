@@ -61,7 +61,7 @@ export function ArticleSearchPage() {
       setError(null);
       setExtractedFromCache(false);
       try {
-        const result = await extractPdf(mainPdf, suppPdf, controller.signal);
+        const result = await extractPdf(mainPdf, suppPdf, controller.signal, { doi, pdb, uniprot });
         if (controller.signal.aborted) return;
         setExtraction(result);
         setPhase('done');
@@ -171,6 +171,16 @@ export function ArticleSearchPage() {
           {extractedFromCache && (
             <div style={{ padding: 'var(--space-sm) var(--space-md)', marginBottom: 'var(--space-md)', background: '#EDF3F7', borderRadius: 'var(--radius-md)', fontSize: 'var(--text-xs)', color: 'var(--color-text-secondary)' }}>
               📦 从历史记录恢复。如需重新提取，请上传新 PDF。
+            </div>
+          )}
+          {!extraction.verified && extraction.verificationNote && (
+            <div style={{ padding: 'var(--space-md) var(--space-lg)', marginBottom: 'var(--space-md)', background: '#FFF3E0', border: '1px solid #E65100', borderRadius: 'var(--radius-md)', fontSize: 'var(--text-sm)', color: '#E65100', fontWeight: 500 }}>
+              ⚠️ 文献匹配警告：{extraction.verificationNote}
+            </div>
+          )}
+          {extraction.verified && extraction.verificationNote && (
+            <div style={{ padding: 'var(--space-sm) var(--space-md)', marginBottom: 'var(--space-md)', background: '#E8F5E9', borderRadius: 'var(--radius-md)', fontSize: 'var(--text-xs)', color: '#2E7D32' }}>
+              {extraction.verificationNote}
             </div>
           )}
           <ExtractionResult extraction={extraction} />

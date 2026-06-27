@@ -236,6 +236,8 @@ export interface ArticleExtraction {
   expression: string;        // Markdown — 表达条件
   purification: string;      // Markdown — 纯化步骤
   crystallization: string;   // Markdown — 结晶条件
+  verified: boolean;         // 论文是否与预期DOI/PDB/UniProt匹配
+  verificationNote: string;  // 验证说明
 }
 
 /** 汇总条目（存入 localStorage） */
