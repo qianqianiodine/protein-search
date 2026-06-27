@@ -5,6 +5,7 @@ import type {
   UniProtCandidate,
   CofactorRef,
 } from '../../shared/types';
+import { SPECIES_CODE_MAP } from './speciesCodes';
 
 const UNIPROT_BASE = 'https://rest.uniprot.org/uniprotkb';
 
@@ -64,21 +65,9 @@ export async function getProteinDetail(
 }
 
 /** 从 UniProt entry name 后缀提取物种标签（如 PTEN_HUMAN → Human） */
-const SPECIES_LABEL_MAP: Record<string, string> = {
-  HUMAN: 'Human', MOUSE: 'Mouse', RAT: 'Rat', BOVIN: 'Cow',
-  PIG: 'Pig', CHICK: 'Chicken', DANRE: 'Zebrafish', DROME: 'Fruit fly',
-  CAEEL: 'C. elegans', YEAST: 'Yeast', SCHPO: 'Fission yeast',
-  ECOLI: 'E. coli', ECO57: 'E. coli', SALTY: 'Salmonella',
-  ARATH: 'Arabidopsis', XENLA: 'Frog', CANLF: 'Dog', DICDI: 'Dictyostelium',
-  RABIT: 'Rabbit', MAIZE: 'Maize', TOBAC: 'Tobacco', SOYBN: 'Soybean',
-  ORYSA: 'Rice', PANTR: 'Chimpanzee', MACFA: 'Macaque', HORSE: 'Horse',
-  SHEEP: 'Sheep', PONAB: 'Orangutan', MYCTU: 'M. tuberculosis',
-  PSEAE: 'P. aeruginosa', BACSU: 'B. subtilis',
-};
-
 function extractSpeciesLabel(uniProtId: string, organism: string): string {
   const parts = uniProtId.split('_');
   if (parts.length < 2) return organism;
   const code = parts[parts.length - 1];
-  return SPECIES_LABEL_MAP[code] || organism;
+  return SPECIES_CODE_MAP[code] || organism;
 }
