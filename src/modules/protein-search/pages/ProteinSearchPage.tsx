@@ -39,6 +39,7 @@ export function ProteinSearchPage() {
 
   const uniprotAbortRef = useRef<AbortController | null>(null);
   const pdbAbortRef = useRef<AbortController | null>(null);
+  const searchCardRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => { setHistory(loadHistory()); }, []);
 
@@ -53,6 +54,33 @@ export function ProteinSearchPage() {
   }, []);
 
   const handleSearch = useCallback(async (query: string, taxId: number) => {
+    const trimmed = query.trim();
+
+    // 搜索历史缓存：相同 query + taxId 直接恢复
+    const cached = history.find(
+      (h) => h.query === trimmed && h.taxId === taxId && h.pdbResults.length > 0,
+    );
+    if (cached) {
+      uniprotAbortRef.current?.abort();
+      setCandidates([]);
+      setPhase('results');
+      setSelectedProtein({
+        accession: cached.protein.accession,
+        uniProtId: cached.protein.accession,
+        name: cached.protein.name,
+        gene: cached.protein.gene,
+        aliases: cached.protein.aliases,
+        organism: cached.protein.organism,
+        taxId: cached.taxId,
+        length: cached.protein.length,
+        cofactors: [],
+        reviewed: cached.protein.reviewed,
+        speciesLabel: cached.protein.speciesLabel,
+      });
+      setStructures(cached.pdbResults);
+      return;
+    }
+
     uniprotAbortRef.current?.abort();
     const controller = new AbortController();
     uniprotAbortRef.current = controller;
@@ -60,8 +88,6 @@ export function ProteinSearchPage() {
     setCandidates([]);
     setError(null);
     setInfoMessage(null);
-    setSelectedProtein(null);
-    setStructures([]);
     try {
       const results = await searchProteins(query, taxId, controller.signal);
       if (controller.signal.aborted) return;
@@ -72,7 +98,7 @@ export function ProteinSearchPage() {
       setError('UniProt 搜索失败，请检查网络后重试');
       setPhase('idle');
     }
-  }, []);
+  }, [history]);
 
   const handleSelectProtein = useCallback(async (candidate: UniProtCandidate) => {
     pdbAbortRef.current?.abort();
@@ -120,6 +146,19 @@ export function ProteinSearchPage() {
       setPhase('results');
     }
   }, []);
+
+  // 点击搜索卡片外部关闭下拉菜单
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (!searchCardRef.current) return;
+      if (phase !== 'suggestions' && phase !== 'searching_uniprot') return;
+      if (searchCardRef.current.contains(e.target as Node)) return;
+      setCandidates([]);
+      setPhase(selectedProtein ? 'results' : 'idle');
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [phase, selectedProtein]);
 
   // Auto-save history on search complete
   const prevPhaseRef = useRef(phase);
@@ -202,7 +241,7 @@ export function ProteinSearchPage() {
         </button>
       </header>
 
-      <div style={{ ...card, ...mb }}>
+      <div ref={searchCardRef} style={{ ...card, ...mb }}>
         <SearchBar onSearch={handleSearch} disabled={phase === 'loading_pdb'} />
         {(phase === 'searching_uniprot' || phase === 'suggestions') && (
           <UniProtSuggestions candidates={candidates} loading={phase === 'searching_uniprot'} onSelect={handleSelectProtein} />
