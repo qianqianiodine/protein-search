@@ -74,3 +74,27 @@
 .length {
   margin-top: 2px;
 }
+
+.reviewedBadge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 0 5px;
+  font-size: 10px;
+  font-weight: 500;
+  color: #8B7E50;
+  background: #F5F0E0;
+  border-radius: 3px;
+  vertical-align: middle;
+}
+
+.speciesTag {
+  display: inline-block;
+  margin-left: 4px;
+  padding: 0 5px;
+  font-size: 10px;
+  font-weight: 500;
+  color: #6B7D8E;
+  background: #EDF2F7;
+  border-radius: 3px;
+  vertical-align: middle;
+}

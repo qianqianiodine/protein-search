@@ -17,7 +17,7 @@ export async function searchProteins(
   signal?: AbortSignal,
 ): Promise<UniProtCandidate[]> {
   const taxFilter = taxId !== 0 ? `+AND+taxonomy_id:${taxId}` : '';
-  const url = `${UNIPROT_BASE}/search?query=${encodeURIComponent(query)}${taxFilter}&size=10&fields=accession,id,gene_names,protein_name,organism_name,length&sort=annotation_score+desc`;
+  const url = `${UNIPROT_BASE}/search?query=${encodeURIComponent(query)}${taxFilter}&size=10&fields=accession,id,gene_names,protein_name,organism_name,length`;
   const data = await apiFetch<UniProtSearchResponse>(url, { signal });
 
   return data.results.map((r) => ({
@@ -29,7 +29,9 @@ export async function searchProteins(
     organism: r.organism?.scientificName || '-',
     taxId: r.organism?.taxonId || taxId,
     length: r.sequence?.length || 0,
+    reviewed: r.entryType?.includes('reviewed') ?? false,
     cofactors: [], // 从详情接口再获取
+    speciesLabel: extractSpeciesLabel(r.uniProtkbId, r.organism?.scientificName || '-'),
   }));
 }
 
@@ -59,4 +61,24 @@ export async function getProteinDetail(
     }
   }
   return cofactors;
+}
+
+/** 从 UniProt entry name 后缀提取物种标签（如 PTEN_HUMAN → Human） */
+const SPECIES_LABEL_MAP: Record<string, string> = {
+  HUMAN: 'Human', MOUSE: 'Mouse', RAT: 'Rat', BOVIN: 'Cow',
+  PIG: 'Pig', CHICK: 'Chicken', DANRE: 'Zebrafish', DROME: 'Fruit fly',
+  CAEEL: 'C. elegans', YEAST: 'Yeast', SCHPO: 'Fission yeast',
+  ECOLI: 'E. coli', ECO57: 'E. coli', SALTY: 'Salmonella',
+  ARATH: 'Arabidopsis', XENLA: 'Frog', CANLF: 'Dog', DICDI: 'Dictyostelium',
+  RABIT: 'Rabbit', MAIZE: 'Maize', TOBAC: 'Tobacco', SOYBN: 'Soybean',
+  ORYSA: 'Rice', PANTR: 'Chimpanzee', MACFA: 'Macaque', HORSE: 'Horse',
+  SHEEP: 'Sheep', PONAB: 'Orangutan', MYCTU: 'M. tuberculosis',
+  PSEAE: 'P. aeruginosa', BACSU: 'B. subtilis',
+};
+
+function extractSpeciesLabel(uniProtId: string, organism: string): string {
+  const parts = uniProtId.split('_');
+  if (parts.length < 2) return organism;
+  const code = parts[parts.length - 1];
+  return SPECIES_LABEL_MAP[code] || organism;
 }

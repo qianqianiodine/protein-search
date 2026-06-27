@@ -13,6 +13,8 @@ export interface UniProtCandidate {
   taxId: number;              // organism.taxonId
   length: number;             // sequence.length
   cofactors: CofactorRef[];   // UniProt cofactorCrossReference (从详情接口获取)
+  reviewed: boolean;          // Swiss-Prot (reviewed) = true, TrEMBL = false
+  speciesLabel: string;       // 物种简称标签（从 entry name 后缀提取，预计算）
 }
 
 /** UniProt 辅因子交叉引用 */
@@ -120,6 +122,7 @@ export interface UniProtSearchResponse {
     sequence?: {
       length: number;
     };
+    entryType?: string;  // "UniProtKB reviewed (Swiss-Prot)" or "UniProtKB unreviewed (TrEMBL)"
   }>;
 }
 
@@ -219,6 +222,8 @@ export interface SearchHistoryEntry {
     aliases: string[];
     organism: string;
     length: number;
+    reviewed: boolean;
+    speciesLabel: string;
   };
   pdbResults: PdbStructure[];
   sortState: Record<string, unknown>;

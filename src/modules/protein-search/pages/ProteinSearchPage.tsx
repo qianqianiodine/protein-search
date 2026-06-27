@@ -114,7 +114,7 @@ export function ProteinSearchPage() {
         timestamp: Date.now(),
         query: selectedProtein.gene || selectedProtein.accession,
         taxId: selectedProtein.taxId,
-        protein: { accession: selectedProtein.accession, name: selectedProtein.name, gene: selectedProtein.gene, aliases: selectedProtein.aliases, organism: selectedProtein.organism, length: selectedProtein.length },
+        protein: { accession: selectedProtein.accession, name: selectedProtein.name, gene: selectedProtein.gene, aliases: selectedProtein.aliases, organism: selectedProtein.organism, length: selectedProtein.length, reviewed: selectedProtein.reviewed, speciesLabel: selectedProtein.speciesLabel },
         pdbResults: structures,
         sortState: {},
         filterState: {},
@@ -137,7 +137,7 @@ export function ProteinSearchPage() {
 
   const handleRestore = useCallback((entry: SearchHistoryEntry) => {
     pdbAbortRef.current?.abort();
-    const protein = { accession: entry.protein.accession, uniProtId: entry.protein.accession, name: entry.protein.name, gene: entry.protein.gene, aliases: entry.protein.aliases, organism: entry.protein.organism, taxId: entry.taxId, length: entry.protein.length, cofactors: [] };
+    const protein = { accession: entry.protein.accession, uniProtId: entry.protein.accession, name: entry.protein.name, gene: entry.protein.gene, aliases: entry.protein.aliases, organism: entry.protein.organism, taxId: entry.taxId, length: entry.protein.length, cofactors: [], reviewed: entry.protein.reviewed, speciesLabel: entry.protein.speciesLabel };
     setSelectedProtein(protein);
     setStructures(entry.pdbResults);
     setPhase('results');
