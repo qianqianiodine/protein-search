@@ -54,33 +54,6 @@ export function ProteinSearchPage() {
   }, []);
 
   const handleSearch = useCallback(async (query: string, taxId: number) => {
-    const trimmed = query.trim();
-
-    // 搜索历史缓存：相同 query + taxId 直接恢复
-    const cached = history.find(
-      (h) => h.query === trimmed && h.taxId === taxId && h.pdbResults.length > 0,
-    );
-    if (cached) {
-      uniprotAbortRef.current?.abort();
-      setCandidates([]);
-      setPhase('results');
-      setSelectedProtein({
-        accession: cached.protein.accession,
-        uniProtId: cached.protein.accession,
-        name: cached.protein.name,
-        gene: cached.protein.gene,
-        aliases: cached.protein.aliases,
-        organism: cached.protein.organism,
-        taxId: cached.taxId,
-        length: cached.protein.length,
-        cofactors: [],
-        reviewed: cached.protein.reviewed,
-        speciesLabel: cached.protein.speciesLabel,
-      });
-      setStructures(cached.pdbResults);
-      return;
-    }
-
     uniprotAbortRef.current?.abort();
     const controller = new AbortController();
     uniprotAbortRef.current = controller;
@@ -98,13 +71,27 @@ export function ProteinSearchPage() {
       setError('UniProt 搜索失败，请检查网络后重试');
       setPhase('idle');
     }
-  }, [history]);
+  }, []);
 
   const handleSelectProtein = useCallback(async (candidate: UniProtCandidate) => {
     pdbAbortRef.current?.abort();
     setSelectedProtein(candidate);
     setStructures([]);
     setInfoMessage(null);
+
+    // 选中相同蛋白时走缓存快速恢复
+    const freshHistory = loadHistory();
+    const cached = freshHistory.find(
+      (h) => h.protein.accession === candidate.accession && h.pdbResults.length > 0,
+    );
+    if (cached) {
+      const enriched: UniProtCandidate = { ...candidate, cofactors: cached.protein.cofactors || [] };
+      setSelectedProtein(enriched);
+      setStructures(cached.pdbResults);
+      setPhase('results');
+      return;
+    }
+
     setPhase('loading_pdb');
     const pdbController = new AbortController();
     pdbAbortRef.current = pdbController;

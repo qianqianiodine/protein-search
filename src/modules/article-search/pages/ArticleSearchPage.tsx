@@ -18,7 +18,9 @@ export function ArticleSearchPage() {
   const navigate = useNavigate();
 
   const doi = searchParams.get('doi') || '';
-  const pdb = searchParams.get('pdb') || '';
+  const pdbRaw = searchParams.get('pdb') || '';
+  const pdb = pdbRaw; // 保持原始字符串用于存储（可能逗号分隔多个 ID）
+  const pdbIds = pdbRaw ? pdbRaw.split(',').filter(Boolean) : [];
   const uniprot = searchParams.get('uniprot') || '';
 
   // 页面加载时检查缓存
@@ -125,10 +127,17 @@ export function ArticleSearchPage() {
               <a style={{ ...paramValue, color: 'var(--color-primary)' }} href={`https://doi.org/${doi}`} target="_blank" rel="noopener noreferrer">{doi}</a>
             </div>
           )}
-          {pdb && (
+          {pdbIds.length > 0 && (
             <div>
               <div style={paramLabel}>PDB ID</div>
-              <a style={{ ...paramValue, color: 'var(--color-primary)' }} href={`https://www.rcsb.org/structure/${pdb}`} target="_blank" rel="noopener noreferrer">{pdb}</a>
+              <span style={paramValue}>
+                {pdbIds.map((id, i) => (
+                  <span key={id}>
+                    {i > 0 && ', '}
+                    <a style={{ color: 'var(--color-primary)' }} href={`https://www.rcsb.org/structure/${id}`} target="_blank" rel="noopener noreferrer">{id}</a>
+                  </span>
+                ))}
+              </span>
             </div>
           )}
           {uniprot && (

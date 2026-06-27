@@ -44,9 +44,9 @@ export function PdbResultTable({
   // 计算 DOI 分组合并信息
   const doiGroups = buildDoiGroups(structures);
 
-  const handleAnalyze = (doi: string, pdbId: string) => {
+  const handleAnalyze = (doi: string, pdbIds: string[]) => {
     onBeforeAnalyze?.();
-    const params = new URLSearchParams({ doi, pdb: pdbId, uniprot: selectedProtein.accession });
+    const params = new URLSearchParams({ doi, pdb: pdbIds.join(','), uniprot: selectedProtein.accession });
     navigate(`/article-search?${params.toString()}`);
   };
 
@@ -127,19 +127,25 @@ export function PdbResultTable({
                 <td className={styles.td}>
                   <LigandCell ligands={s.ligands} />
                 </td>
-                <td className={styles.td}>
-                  {s.doi ? (
-                    <button
-                      className={styles.analyzeBtn}
-                      onClick={() => handleAnalyze(s.doi!, s.pdbId)}
-                      title="在文献分析模块中打开"
-                    >
-                      📄
-                    </button>
-                  ) : (
-                    <span style={{ color: 'var(--color-text-muted)' }}>—</span>
-                  )}
-                </td>
+                {/* 分析列 — 首行带 rowSpan 合并 */}
+                {dg.showDoi && (
+                  <td className={`${styles.td} ${styles.analyzeCell}`} rowSpan={dg.rowSpan}>
+                    {s.doi ? (
+                      <button
+                        className={styles.analyzeBtn}
+                        onClick={() => {
+                          const groupPdbIds = structures.slice(idx, idx + dg.rowSpan).map((r) => r.pdbId);
+                          handleAnalyze(s.doi!, groupPdbIds);
+                        }}
+                        title="在文献分析模块中打开"
+                      >
+                        📄
+                      </button>
+                    ) : (
+                      <span style={{ color: 'var(--color-text-muted)' }}>—</span>
+                    )}
+                  </td>
+                )}
               </tr>
             );
           })}

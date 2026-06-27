@@ -92,6 +92,12 @@
   text-decoration: underline;
 }
 
+/* Analyze cell — merged for same DOI */
+.analyzeCell {
+  vertical-align: middle !important;
+  text-align: center;
+}
+
 /* Analyze button */
 .analyzeBtn {
   background: none;
