@@ -43,9 +43,12 @@ export function ProteinSearchPage() {
 
   useEffect(() => { setHistory(loadHistory()); }, []);
 
+  const _hasStaleCache = (results: PdbStructure[]) =>
+    results.some((s) => s.doi && !s.citationTitle);
+
   useEffect(() => {
     const saved = restoreProteinSearchState();
-    if (saved?.selectedProtein && saved.pdbResults.length > 0) {
+    if (saved?.selectedProtein && saved.pdbResults.length > 0 && !_hasStaleCache(saved.pdbResults)) {
       setSelectedProtein(saved.selectedProtein);
       setStructures(saved.pdbResults);
       setPhase('results');
@@ -82,7 +85,7 @@ export function ProteinSearchPage() {
     // 选中相同蛋白时走缓存快速恢复
     const freshHistory = loadHistory();
     const cached = freshHistory.find(
-      (h) => h.protein.accession === candidate.accession && h.pdbResults.length > 0,
+      (h) => h.protein.accession === candidate.accession && h.pdbResults.length > 0 && !_hasStaleCache(h.pdbResults),
     );
     if (cached) {
       const enriched: UniProtCandidate = { ...candidate, cofactors: cached.protein.cofactors || [] };

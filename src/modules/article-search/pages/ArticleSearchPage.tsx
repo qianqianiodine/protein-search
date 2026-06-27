@@ -98,6 +98,13 @@ export function ArticleSearchPage() {
     navigate('/');
   };
 
+  const handleReset = () => {
+    setExtraction(null);
+    setPhase('idle');
+    setError(null);
+    setExtractedFromCache(false);
+  };
+
   // styles
   const page: React.CSSProperties = { maxWidth: 1000, margin: '0 auto', padding: 'var(--space-2xl)' };
   const card: React.CSSProperties = { background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-lg)', padding: 'var(--space-xl)', marginBottom: 'var(--space-xl)' };
@@ -176,7 +183,7 @@ export function ArticleSearchPage() {
         <>
           {extractedFromCache && (
             <div style={{ padding: 'var(--space-sm) var(--space-md)', marginBottom: 'var(--space-md)', background: '#EDF3F7', borderRadius: 'var(--radius-md)', fontSize: 'var(--text-xs)', color: 'var(--color-text-secondary)' }}>
-              📦 从历史记录恢复。如需重新提取，请上传新 PDF。
+              📦 从历史记录恢复。如需重新提取，请点击下方按钮。
             </div>
           )}
           {!extraction.verified && extraction.verificationNote && (
@@ -191,6 +198,7 @@ export function ArticleSearchPage() {
           )}
           <ExtractionResult extraction={extraction} />
           <div style={{ display: 'flex', gap: 'var(--space-md)', marginTop: 'var(--space-xl)', marginBottom: 'var(--space-2xl)' }}>
+            <button onClick={handleReset} style={btnSecondary}>🔄 重新上传</button>
             <button onClick={handleBack} style={btnSecondary}>← 返回搜索结果</button>
             {added ? (
               <button disabled style={{ ...btnSuccess, opacity: 0.7, cursor: 'default' }}>✓ 已加入汇总</button>
