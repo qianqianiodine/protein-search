@@ -252,9 +252,9 @@ export function ProteinSearchPage() {
       {selectedProtein && (
         <div style={proteinBar}>
           <div>
-            <span style={{ fontWeight: 600, fontSize: 'var(--text-base)' }}>{selectedProtein.name}</span>
+            <span style={{ fontWeight: 600, fontSize: 'var(--text-base)' }}>{selectedProtein.gene}</span>
             <span style={{ color: 'var(--color-text-secondary)', marginLeft: 'var(--space-sm)', fontSize: 'var(--text-sm)' }}>
-              ({selectedProtein.gene})
+              ({selectedProtein.name})
             </span>
           </div>
           <span style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-sm)', color: 'var(--color-primary)', fontWeight: 500 }}>
