@@ -227,6 +227,29 @@ export interface SearchHistoryEntry {
 }
 
 // ============================================================
+// Article-Search 相关类型
+// ============================================================
+
+/** 单篇文献提取结果 — 四大块 */
+export interface ArticleExtraction {
+  construct: string;         // Markdown — 蛋白构建信息
+  expression: string;        // Markdown — 表达条件
+  purification: string;      // Markdown — 纯化步骤
+  crystallization: string;   // Markdown — 结晶条件
+}
+
+/** 汇总条目（存入 localStorage） */
+export interface SummaryEntry {
+  id: string;
+  doi: string;
+  pdbId: string;
+  uniprot: string;
+  title: string;             // 论文标题
+  extraction: ArticleExtraction;
+  addedAt: number;
+}
+
+// ============================================================
 // 应用路由参数
 // ============================================================
 

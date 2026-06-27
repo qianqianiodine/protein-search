@@ -1,27 +1,82 @@
-import { useEffect } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { taskController } from '../services/articleSearchTaskController';
+import { extractPdf } from '../services/extractionService';
+import { addToSummary, isInSummary } from '../services/summaryStorage';
+import { PdfUploader } from '../components/PdfUploader';
+import { ExtractionResult } from '../components/ExtractionResult';
+import type { ArticleExtraction } from '../../shared/types';
+
+type Phase = 'idle' | 'extracting' | 'done';
 
 export function ArticleSearchPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
-  const doi = searchParams.get('doi') || '-';
-  const pdb = searchParams.get('pdb') || '-';
-  const uniprot = searchParams.get('uniprot') || '-';
+  const doi = searchParams.get('doi') || '';
+  const pdb = searchParams.get('pdb') || '';
+  const uniprot = searchParams.get('uniprot') || '';
 
-  useEffect(() => {
-    return () => { taskController.cancelAll(); };
-  }, []);
+  const [phase, setPhase] = useState<Phase>('idle');
+  const [extraction, setExtraction] = useState<ArticleExtraction | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [added, setAdded] = useState(() => isInSummary(doi, uniprot));
+  const abortRef = useRef<AbortController | null>(null);
+
+  const handleUpload = useCallback(
+    async (mainPdf: File, suppPdf?: File | null) => {
+      abortRef.current?.abort();
+      const controller = taskController.register();
+      abortRef.current = controller;
+
+      setPhase('extracting');
+      setError(null);
+      try {
+        const result = await extractPdf(mainPdf, suppPdf, controller.signal);
+        if (controller.signal.aborted) return;
+        setExtraction(result);
+        setPhase('done');
+        setAdded(isInSummary(doi, uniprot));
+      } catch (err) {
+        if (controller.signal.aborted) return;
+        setError(err instanceof Error ? err.message : '提取失败');
+        setPhase('idle');
+      } finally {
+        taskController.remove(controller);
+      }
+    },
+    [doi, uniprot],
+  );
+
+  const handleAddToSummary = () => {
+    if (!extraction) return;
+    addToSummary({
+      id: `${doi}-${uniprot}-${Date.now()}`,
+      doi,
+      pdbId: pdb,
+      uniprot,
+      title: doi || pdb || uniprot,
+      extraction,
+      addedAt: Date.now(),
+    });
+    setAdded(true);
+  };
 
   const handleBack = () => {
     taskController.cancelAll();
     navigate('/');
   };
 
-  const page = { maxWidth: 800, margin: '0 auto', padding: 'var(--space-2xl)' };
-  const card = { background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-lg)', padding: 'var(--space-xl)', marginBottom: 'var(--space-xl)' };
-  const btn = { padding: 'var(--space-md) var(--space-xl)', fontSize: 'var(--text-base)', fontWeight: 500, color: '#fff', background: 'var(--color-primary)', border: 'none', borderRadius: 'var(--radius-md)', cursor: 'pointer' };
+  // styles
+  const page: React.CSSProperties = { maxWidth: 1000, margin: '0 auto', padding: 'var(--space-2xl)' };
+  const card: React.CSSProperties = { background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-lg)', padding: 'var(--space-xl)', marginBottom: 'var(--space-xl)' };
+  const btnPrimary: React.CSSProperties = { padding: 'var(--space-md) var(--space-xl)', fontSize: 'var(--text-base)', fontWeight: 500, color: '#fff', background: 'var(--color-primary)', border: 'none', borderRadius: 'var(--radius-md)', cursor: 'pointer' };
+  const btnSecondary: React.CSSProperties = { ...btnPrimary, background: 'var(--color-surface)', color: 'var(--color-text)', border: '1px solid var(--color-border)' };
+  const btnSuccess: React.CSSProperties = { ...btnPrimary, background: '#7D9DB5' };
+  const errBox: React.CSSProperties = { marginTop: 'var(--space-md)', padding: 'var(--space-md)', color: 'var(--color-danger)', background: 'var(--color-danger-bg)', borderRadius: 'var(--radius-md)', fontSize: 'var(--text-sm)' };
+  const paramRow: React.CSSProperties = { display: 'flex', gap: 'var(--space-xl)', flexWrap: 'wrap', marginBottom: 'var(--space-md)' };
+  const paramLabel: React.CSSProperties = { fontSize: 'var(--text-xs)', color: 'var(--color-text-secondary)' };
+  const paramValue: React.CSSProperties = { fontSize: 'var(--text-sm)', fontFamily: 'var(--font-mono)', color: 'var(--color-text)' };
 
   return (
     <div style={page}>
@@ -30,35 +85,66 @@ export function ArticleSearchPage() {
           Article Analysis
         </h1>
         <p style={{ color: 'var(--color-text-secondary)', marginTop: 4, fontSize: 'var(--text-sm)' }}>
-          纯化与结晶分析功能待开发
+          上传文献 PDF，自动提取表达、纯化、结晶信息
         </p>
       </header>
 
+      {/* 参数卡片 */}
       <div style={card}>
-        <h2 style={{ fontSize: 'var(--text-base)', fontWeight: 600, marginBottom: 'var(--space-lg)' }}>参数</h2>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <tbody>
-            {[
-              ['DOI', doi],
-              ['PDB ID', pdb],
-              ['UniProt', uniprot],
-            ].map(([label, value]) => (
-              <tr key={label}>
-                <td style={{ padding: 'var(--space-sm) 0', color: 'var(--color-text-secondary)', width: 120, fontSize: 'var(--text-sm)' }}>
-                  {label}
-                </td>
-                <td style={{ padding: 'var(--space-sm) 0', fontFamily: 'var(--font-mono)', fontSize: 'var(--text-sm)' }}>
-                  {value}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <h2 style={{ fontSize: 'var(--text-base)', fontWeight: 600, marginBottom: 'var(--space-lg)' }}>来源</h2>
+        <div style={paramRow}>
+          {doi && (
+            <div>
+              <div style={paramLabel}>DOI</div>
+              <a style={{ ...paramValue, color: 'var(--color-primary)' }} href={`https://doi.org/${doi}`} target="_blank" rel="noopener noreferrer">{doi}</a>
+            </div>
+          )}
+          {pdb && (
+            <div>
+              <div style={paramLabel}>PDB ID</div>
+              <a style={{ ...paramValue, color: 'var(--color-primary)' }} href={`https://www.rcsb.org/structure/${pdb}`} target="_blank" rel="noopener noreferrer">{pdb}</a>
+            </div>
+          )}
+          {uniprot && (
+            <div>
+              <div style={paramLabel}>UniProt</div>
+              <span style={paramValue}>{uniprot}</span>
+            </div>
+          )}
+        </div>
       </div>
 
-      <button onClick={handleBack} style={btn}>
-        ← 返回搜索结果
-      </button>
+      {/* 上传 + 提取 */}
+      {!extraction && (
+        <div style={card}>
+          <h2 style={{ fontSize: 'var(--text-base)', fontWeight: 600, marginBottom: 'var(--space-lg)' }}>上传文献</h2>
+          <PdfUploader onUpload={handleUpload} disabled={phase === 'extracting'} />
+          {phase === 'extracting' && (
+            <div style={{ textAlign: 'center', padding: 'var(--space-xl)', color: 'var(--color-text-secondary)' }}>
+              ⏳ 正在解析 PDF 并提取信息（可能需要 1-2 分钟）...
+            </div>
+          )}
+          {error && <div style={errBox}>{error}</div>}
+        </div>
+      )}
+
+      {/* 结果 */}
+      {extraction && (
+        <>
+          <ExtractionResult extraction={extraction} />
+          <div style={{ display: 'flex', gap: 'var(--space-md)', marginTop: 'var(--space-xl)', marginBottom: 'var(--space-2xl)' }}>
+            <button onClick={handleBack} style={btnSecondary}>← 返回搜索结果</button>
+            {added ? (
+              <button disabled style={{ ...btnSuccess, opacity: 0.7, cursor: 'default' }}>✓ 已加入汇总</button>
+            ) : (
+              <button onClick={handleAddToSummary} style={btnSecondary}>📊 加入汇总</button>
+            )}
+            {added && (
+              <button onClick={() => navigate('/article-summary')} style={btnPrimary}>查看汇总对比</button>
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
 }
