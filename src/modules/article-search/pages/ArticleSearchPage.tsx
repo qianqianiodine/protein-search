@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { taskController } from '../services/articleSearchTaskController';
 import { extractPdf } from '../services/extractionService';
+import { clearPendingPdfs } from '../services/pdfFileCache';
 import { addToSummary, isInSummary } from '../services/summaryStorage';
 import {
   loadArticleExtraction,
@@ -65,6 +66,7 @@ export function ArticleSearchPage() {
         setExtraction(result);
         setPhase('done');
         setAdded(isInSummary(doi, uniprot));
+        clearPendingPdfs(); // 提取成功后删除缓存的 PDF
       } catch (err) {
         if (controller.signal.aborted) return;
         setError(err instanceof Error ? err.message : '提取失败');

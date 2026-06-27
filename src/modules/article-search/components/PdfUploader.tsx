@@ -1,4 +1,5 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
+import { savePendingPdf, loadPendingPdf } from '../services/pdfFileCache';
 
 interface PdfUploaderProps {
   onUpload: (mainPdf: File, suppPdf?: File | null) => void;
@@ -11,16 +12,42 @@ export function PdfUploader({ onUpload, disabled }: PdfUploaderProps) {
   const [mainFile, setMainFile] = useState<File | null>(null);
   const [suppFile, setSuppFile] = useState<File | null>(null);
   const [dragOver, setDragOver] = useState<'main' | 'supp' | null>(null);
+  const [restored, setRestored] = useState(false);
+
+  // 页面刷新后恢复缓存的文件
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const [main, supp] = await Promise.all([
+        loadPendingPdf('main-pdf'),
+        loadPendingPdf('supp-pdf'),
+      ]);
+      if (cancelled) return;
+      if (main) setMainFile(main);
+      if (supp) setSuppFile(supp);
+      setRestored(true);
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   const handleMainChange = (file: File | null) => {
     setMainFile(file);
-    if (file && !disabled) {
-      onUpload(file, suppFile);
+    if (file) {
+      savePendingPdf('main-pdf', file);
     }
   };
 
   const handleSuppChange = (file: File | null) => {
     setSuppFile(file);
+    if (file) {
+      savePendingPdf('supp-pdf', file);
+    }
+  };
+
+  const handleSubmit = () => {
+    if (mainFile && !disabled) {
+      onUpload(mainFile, suppFile);
+    }
   };
 
   const buildDropHandler = (target: 'main' | 'supp') => ({
@@ -57,6 +84,19 @@ export function PdfUploader({ onUpload, disabled }: PdfUploaderProps) {
     fontWeight: 600,
   };
 
+  const submitBtn: React.CSSProperties = {
+    marginTop: 'var(--space-lg)',
+    padding: 'var(--space-md) var(--space-2xl)',
+    fontSize: 'var(--text-base)',
+    fontWeight: 600,
+    color: '#fff',
+    background: mainFile && !disabled ? 'var(--color-primary)' : 'var(--color-text-muted)',
+    border: 'none',
+    borderRadius: 'var(--radius-md)',
+    cursor: mainFile && !disabled ? 'pointer' : 'not-allowed',
+    width: '100%',
+  };
+
   return (
     <div>
       {/* 正文 PDF */}
@@ -70,7 +110,11 @@ export function PdfUploader({ onUpload, disabled }: PdfUploaderProps) {
         {...buildDropHandler('main')}
         onClick={() => mainRef.current?.click()}
       >
-        {mainFile ? (
+        {!restored ? (
+          <span style={{ color: 'var(--color-text-muted)', fontSize: 'var(--text-sm)' }}>
+            恢复中...
+          </span>
+        ) : mainFile ? (
           <span style={{ color: 'var(--color-text)', fontSize: 'var(--text-sm)' }}>
             📄 {mainFile.name} ({(mainFile.size / 1024 / 1024).toFixed(1)} MB)
           </span>
@@ -103,7 +147,11 @@ export function PdfUploader({ onUpload, disabled }: PdfUploaderProps) {
         {...buildDropHandler('supp')}
         onClick={() => suppRef.current?.click()}
       >
-        {suppFile ? (
+        {!restored ? (
+          <span style={{ color: 'var(--color-text-muted)', fontSize: 'var(--text-sm)' }}>
+            恢复中...
+          </span>
+        ) : suppFile ? (
           <span style={{ color: 'var(--color-text)', fontSize: 'var(--text-sm)' }}>
             📎 {suppFile.name} ({(suppFile.size / 1024 / 1024).toFixed(1)} MB)
           </span>
@@ -124,6 +172,15 @@ export function PdfUploader({ onUpload, disabled }: PdfUploaderProps) {
           }}
         />
       </div>
+
+      {/* 提交按钮 */}
+      <button
+        style={submitBtn}
+        disabled={!mainFile || disabled}
+        onClick={handleSubmit}
+      >
+        {disabled ? '提取中...' : '🚀 提交分析'}
+      </button>
     </div>
   );
 }
