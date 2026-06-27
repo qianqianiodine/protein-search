@@ -40,6 +40,8 @@ export interface PdbStructure {
   ligands: LigandSummary[];
   /** 文献 DOI */
   doi: string | null;                 // rcsb_primary_citation.pdbx_database_id_DOI
+  /** 文献标题 */
+  citationTitle: string | null;       // rcsb_primary_citation.title
   /** 生物来源 */
   organism: string;                   // rcsb_entity_source_organism[0].ncbi_scientific_name
   /** 有 binding affinity 数据的 comp_id 列表（用于抑制剂判定） */
@@ -155,6 +157,7 @@ export interface RcsbEntryResponse {
   };
   rcsb_primary_citation?: {
     pdbx_database_id_DOI?: string;
+    title?: string;
   };
   rcsb_entity_source_organism?: Array<{
     ncbi_scientific_name?: string;

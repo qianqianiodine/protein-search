@@ -185,6 +185,7 @@ async function getSinglePdbStructure(
     coverage: coverages,
     ligands,
     doi: entry.rcsb_primary_citation?.pdbx_database_id_DOI || null,
+    citationTitle: entry.rcsb_primary_citation?.title || null,
     organism:
       entry.rcsb_entity_source_organism?.[0]?.ncbi_scientific_name || '-',
     bindingAffinityCompIds: bindingAffinityCompIds.size > 0

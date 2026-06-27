@@ -23,6 +23,7 @@ export function ArticleSearchPage() {
   const pdb = pdbRaw; // 保持原始字符串用于存储（可能逗号分隔多个 ID）
   const pdbIds = pdbRaw ? pdbRaw.split(',').filter(Boolean) : [];
   const uniprot = searchParams.get('uniprot') || '';
+  const paperTitle = searchParams.get('title') || '';
 
   // 页面加载时检查缓存
   const cached = doi && uniprot ? loadArticleExtraction(doi, uniprot) : null;
@@ -121,7 +122,12 @@ export function ArticleSearchPage() {
 
       {/* 参数卡片 */}
       <div style={card}>
-        <h2 style={{ fontSize: 'var(--text-base)', fontWeight: 600, marginBottom: 'var(--space-lg)' }}>来源</h2>
+        <h2 style={{ fontSize: 'var(--text-base)', fontWeight: 600, marginBottom: paperTitle ? 'var(--space-sm)' : 'var(--space-lg)' }}>来源</h2>
+        {paperTitle && (
+          <div style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text)', fontWeight: 500, marginBottom: 'var(--space-lg)', lineHeight: 1.5 }}>
+            {paperTitle}
+          </div>
+        )}
         <div style={paramRow}>
           {doi && (
             <div>

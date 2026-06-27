@@ -2,11 +2,11 @@ import { useCallback, useRef, useState } from 'react';
 import type { ArticleExtraction } from '../../shared/types';
 import { AnnotationToolbar } from './AnnotationToolbar';
 
-const SECTIONS: Array<{ key: keyof ArticleExtraction; label: string; icon: string }> = [
-  { key: 'construct', label: '蛋白构建', icon: '🧬' },
-  { key: 'expression', label: '表达', icon: '🦠' },
-  { key: 'purification', label: '纯化', icon: '🧪' },
-  { key: 'crystallization', label: '结晶', icon: '💎' },
+const SECTIONS: Array<{ key: keyof ArticleExtraction; label: string }> = [
+  { key: 'construct', label: '蛋白构建' },
+  { key: 'expression', label: '表达' },
+  { key: 'purification', label: '纯化' },
+  { key: 'crystallization', label: '结晶' },
 ];
 
 interface ExtractionResultProps {
@@ -16,8 +16,8 @@ interface ExtractionResultProps {
 export function ExtractionResult({ extraction }: ExtractionResultProps) {
   return (
     <div>
-      {SECTIONS.map(({ key, label, icon }) => (
-        <SectionBlock key={key} title={`${icon} ${label}`} content={extraction[key]} />
+      {SECTIONS.map(({ key, label }) => (
+        <SectionBlock key={key} title={label} content={extraction[key]} />
       ))}
     </div>
   );

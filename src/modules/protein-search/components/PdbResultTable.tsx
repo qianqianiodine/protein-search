@@ -44,9 +44,12 @@ export function PdbResultTable({
   // 计算 DOI 分组合并信息
   const doiGroups = buildDoiGroups(structures);
 
-  const handleAnalyze = (doi: string, pdbIds: string[]) => {
+  const handleAnalyze = (doi: string, pdbIds: string[], citationTitle?: string | null) => {
     onBeforeAnalyze?.();
     const params = new URLSearchParams({ doi, pdb: pdbIds.join(','), uniprot: selectedProtein.accession });
+    if (citationTitle) {
+      params.set('title', citationTitle);
+    }
     navigate(`/article-search?${params.toString()}`);
   };
 
@@ -111,14 +114,19 @@ export function PdbResultTable({
                 {dg.showDoi && (
                   <td className={`${styles.td} ${styles.doiCell}`} rowSpan={dg.rowSpan}>
                     {s.doi ? (
-                      <a
-                        className={styles.doiLink}
-                        href={`https://doi.org/${s.doi}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        {s.doi}
-                      </a>
+                      <>
+                        <a
+                          className={styles.doiLink}
+                          href={`https://doi.org/${s.doi}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          {s.doi}
+                        </a>
+                        {s.citationTitle && (
+                          <div className={styles.citationTitle}>{s.citationTitle}</div>
+                        )}
+                      </>
                     ) : (
                       <span style={{ color: 'var(--color-text-muted)' }}>-</span>
                     )}
@@ -135,7 +143,7 @@ export function PdbResultTable({
                         className={styles.analyzeBtn}
                         onClick={() => {
                           const groupPdbIds = structures.slice(idx, idx + dg.rowSpan).map((r) => r.pdbId);
-                          handleAnalyze(s.doi!, groupPdbIds);
+                          handleAnalyze(s.doi!, groupPdbIds, s.citationTitle);
                         }}
                         title="在文献分析模块中打开"
                       >

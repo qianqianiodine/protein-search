@@ -92,6 +92,15 @@
   text-decoration: underline;
 }
 
+/* 论文标题 */
+.citationTitle {
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  line-height: 1.4;
+  word-break: break-word;
+}
+
 /* Analyze cell — merged for same DOI */
 .analyzeCell {
   vertical-align: middle !important;
