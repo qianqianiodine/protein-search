@@ -85,7 +85,11 @@ export function ProteinSearchPage() {
     try {
       const [cofactors, pdbIds] = await Promise.all([
         getProteinDetail(candidate.accession, pdbController.signal).catch(() => [] as []),
-        searchPdbByUniprot(candidate.accession, pdbController.signal),
+        searchPdbByUniprot(candidate.accession, pdbController.signal).catch((err: unknown) => {
+          if (err instanceof DOMException && err.name === 'AbortError') throw err;
+          console.warn('PDB search failed:', err);
+          return [] as string[];
+        }),
       ]);
       if (pdbController.signal.aborted) return;
       const enriched: UniProtCandidate = { ...candidate, cofactors };
@@ -101,6 +105,11 @@ export function ProteinSearchPage() {
         pdbController.signal,
       );
       if (pdbController.signal.aborted) return;
+      if (structs.length === 0) {
+        setInfoMessage('该蛋白暂无 X-ray PDB 结构');
+        setPhase('results');
+        return;
+      }
       const classified = structs.map((s) => classifyStructureLigands(s));
       const sorted = sortByPriority(classified);
       setStructures(sorted);
