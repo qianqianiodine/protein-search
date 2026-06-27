@@ -6,8 +6,6 @@ const CLASS_LABELS: Record<LigandClass, string> = {
   cofactor: '辅因子',
   inhibitor: '抑制剂',
   crystal: '结晶',
-  metal: '金属',
-  unknown: '未知',
 };
 
 interface LigandBadgeProps {

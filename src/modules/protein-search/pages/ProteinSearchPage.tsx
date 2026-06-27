@@ -30,6 +30,7 @@ export function ProteinSearchPage() {
   const [phase, setPhase] = useState<Phase>('idle');
   const [candidates, setCandidates] = useState<UniProtCandidate[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [infoMessage, setInfoMessage] = useState<string | null>(null);
   const [selectedProtein, setSelectedProtein] = useState<UniProtCandidate | null>(null);
   const [structures, setStructures] = useState<PdbStructure[]>([]);
   const [pdbProgress, setPdbProgress] = useState({ done: 0, total: 0 });
@@ -58,6 +59,7 @@ export function ProteinSearchPage() {
     setPhase('searching_uniprot');
     setCandidates([]);
     setError(null);
+    setInfoMessage(null);
     setSelectedProtein(null);
     setStructures([]);
     try {
@@ -76,6 +78,7 @@ export function ProteinSearchPage() {
     pdbAbortRef.current?.abort();
     setSelectedProtein(candidate);
     setStructures([]);
+    setInfoMessage(null);
     setPhase('loading_pdb');
     const pdbController = new AbortController();
     pdbAbortRef.current = pdbController;
@@ -87,14 +90,18 @@ export function ProteinSearchPage() {
       if (pdbController.signal.aborted) return;
       const enriched: UniProtCandidate = { ...candidate, cofactors };
       setSelectedProtein(enriched);
-      if (pdbIds.length === 0) { setPhase('results'); return; }
+      if (pdbIds.length === 0) {
+        setInfoMessage('该蛋白暂无 X-ray PDB 结构');
+        setPhase('results');
+        return;
+      }
       const structs = await getPdbStructures(
         pdbIds,
         (done, total) => setPdbProgress({ done, total }),
         pdbController.signal,
       );
       if (pdbController.signal.aborted) return;
-      const classified = structs.map((s) => classifyStructureLigands(s, cofactors));
+      const classified = structs.map((s) => classifyStructureLigands(s));
       const sorted = sortByPriority(classified);
       setStructures(sorted);
       setPhase('results');
@@ -226,6 +233,11 @@ export function ProteinSearchPage() {
               </span>
             )}
           </h2>
+          {structures.length === 0 && infoMessage && phase !== 'loading_pdb' && (
+            <div style={{ padding: 'var(--space-xl)', textAlign: 'center', color: 'var(--color-text-secondary)', fontSize: 'var(--text-base)' }}>
+              {infoMessage}
+            </div>
+          )}
           <PdbResultTable structures={structures} selectedProtein={selectedProtein} loading={phase === 'loading_pdb'} progress={pdbProgress} onBeforeAnalyze={handleBeforeAnalyze} />
         </div>
       )}

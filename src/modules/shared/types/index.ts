@@ -78,27 +78,22 @@ export interface LigandSummary {
 
 /** 配体分类 */
 export type LigandClass =
-  | 'cofactor'       // 🔵 天然辅因子 (UniProt cofactorCrossReference 确认)
-  | 'inhibitor'      // 🔴 外来抑制剂
-  | 'crystal'        // ⬜ 结晶/缓冲液成分 (排序时忽略)
-  | 'metal'          // 🟡 金属离子
-  | 'unknown';       // ⚪ 无法判断
+  | 'cofactor'       // 天然辅因子 (NATIVE_LIGANDS 白名单命中)
+  | 'inhibitor'      // 外来抑制剂 (不在白名单中)
+  | 'crystal';       // 结晶/缓冲液成分 (BACKGROUND_LIGANDS 白名单命中)
 
 /** 配体分类颜色映射 — 莫兰迪色系 */
 export const LIGAND_COLORS: Record<LigandClass, string> = {
   cofactor:  '#7D9DB5',  // 灰蓝
   inhibitor: '#C49B9B',  // 灰玫瑰
   crystal:   '#9EAE9A',  // 灰绿
-  metal:     '#C4B89A',  // 灰金
-  unknown:   '#9E9792',  // 暖灰
 };
 
 /** PDB 结构排序优先级 */
 export type SortPriority =
-  | 'apo'              // 🟢 无抑制剂、无辅因子
-  | 'holo_cofactor'    // 🔵 无抑制剂、有天然辅因子
-  | 'inhibited'        // 🔴 有外来抑制剂
-  | 'unknown';         // ⚪ 无法判断
+  | 'apo'              // 无抑制剂、无辅因子
+  | 'holo_cofactor'    // 无抑制剂、有天然辅因子
+  | 'inhibited';       // 有外来抑制剂
 
 // ============================================================
 // API 响应原始类型 (精简 — 仅保留用到的字段)

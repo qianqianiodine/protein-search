@@ -1,4 +1,4 @@
-import type { PdbStructure, SortPriority, CofactorRef } from '../../shared/types';
+import type { PdbStructure, SortPriority } from '../../shared/types';
 import { classifyLigands } from '../config/ligand-classification';
 
 /**
@@ -8,7 +8,6 @@ import { classifyLigands } from '../config/ligand-classification';
  * 1. apo — 无抑制剂、无辅因子（真正干净）
  * 2. holo_cofactor — 无抑制剂、有天然辅因子
  * 3. inhibited — 有外来抑制剂
- * 4. unknown — 无法判断
  *
  * 结晶/缓冲液成分已被分类为 crystal，不影响排序
  */
@@ -22,11 +21,9 @@ export function computeSortPriority(
 
   const hasInhibitor = relevant.some((l) => l.classification === 'inhibitor');
   const hasCofactor = relevant.some((l) => l.classification === 'cofactor');
-  const hasUnknown = relevant.some((l) => l.classification === 'unknown');
 
   if (hasInhibitor) return 'inhibited';
   if (hasCofactor) return 'holo_cofactor';
-  if (hasUnknown) return 'unknown';
 
   // 无抑制剂、无辅因子 = 真正 apo
   return 'apo';
@@ -37,7 +34,6 @@ const PRIORITY_ORDER: Record<SortPriority, number> = {
   apo: 0,
   holo_cofactor: 1,
   inhibited: 2,
-  unknown: 3,
 };
 
 /** 按排序优先级 + DOI 分组排列 PDB 结构 */
@@ -61,7 +57,6 @@ export function sortByPriority(
 /** 将分类应用到结构的配体上 */
 export function classifyStructureLigands(
   structure: PdbStructure,
-  uniprotCofactors: CofactorRef[],
 ): PdbStructure {
   if (structure.ligands.length === 0) return structure;
 
@@ -75,7 +70,7 @@ export function classifyStructureLigands(
     ? new Set(structure.bindingAffinityCompIds)
     : undefined;
 
-  const classified = classifyLigands(ligands, uniprotCofactors, bindingAffinitySet);
+  const classified = classifyLigands(ligands, bindingAffinitySet);
 
   return {
     ...structure,

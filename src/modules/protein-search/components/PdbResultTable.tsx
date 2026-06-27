@@ -5,11 +5,10 @@ import { LigandCell } from './LigandCell';
 import { computeSortPriority } from '../utils/tableSortUtils';
 import styles from './PdbResultTable.module.css';
 
-const PRIORITY_LABEL: Record<string, { text: string; emoji: string }> = {
-  apo: { text: 'apo', emoji: '🟢' },
-  holo_cofactor: { text: '辅因子', emoji: '🔵' },
-  inhibited: { text: '抑制剂', emoji: '🔴' },
-  unknown: { text: '未知', emoji: '⚪' },
+const PRIORITY_LABEL: Record<string, { text: string; dotClass: string }> = {
+  apo: { text: 'Apo', dotClass: styles.dotApo },
+  holo_cofactor: { text: '辅因子', dotClass: styles.dotCofactor },
+  inhibited: { text: '抑制剂', dotClass: styles.dotInhibitor },
 };
 
 interface PdbResultTableProps {
@@ -56,7 +55,7 @@ export function PdbResultTable({
       <table className={styles.table}>
         <thead className={styles.thead}>
           <tr>
-            <th className={styles.th} style={{ width: 52 }}>#</th>
+            <th className={styles.th} style={{ width: 80 }}>类型</th>
             <th className={styles.th}>PDB ID</th>
             <th className={styles.th}>结构范围</th>
             <th className={styles.th}>文献</th>
@@ -76,9 +75,10 @@ export function PdbResultTable({
                 onMouseEnter={() => setHoveredGroup(dg.groupId)}
                 onMouseLeave={() => setHoveredGroup(null)}
               >
-                <td className={styles.td}>
+                <td className={`${styles.td} ${styles.priorityCell}`}>
                   <span className={styles.priorityBadge} title={badge.text}>
-                    {badge.emoji}
+                    <span className={`${styles.dot} ${badge.dotClass}`} />
+                    <span className={styles.priorityText}>{badge.text}</span>
                   </span>
                 </td>
                 <td className={styles.td}>

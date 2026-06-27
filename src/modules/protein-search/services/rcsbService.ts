@@ -171,7 +171,7 @@ async function getSinglePdbStructure(
           nonpoly.rcsb_nonpolymer_entity_container_identifiers?.entity_id || 0,
         compId: nonpoly.pdbx_entity_nonpoly.comp_id,
         name: nonpoly.pdbx_entity_nonpoly.name || nonpoly.pdbx_entity_nonpoly.comp_id,
-        classification: 'unknown',
+        classification: 'inhibitor',
       });
     }
   }
