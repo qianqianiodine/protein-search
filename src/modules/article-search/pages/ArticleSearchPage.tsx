@@ -1,8 +1,12 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { taskController } from '../services/articleSearchTaskController';
 import { extractPdf } from '../services/extractionService';
 import { addToSummary, isInSummary } from '../services/summaryStorage';
+import {
+  loadArticleExtraction,
+  saveArticleExtraction,
+} from '../services/articleHistoryService';
 import { PdfUploader } from '../components/PdfUploader';
 import { ExtractionResult } from '../components/ExtractionResult';
 import type { ArticleExtraction } from '../../shared/types';
@@ -17,11 +21,32 @@ export function ArticleSearchPage() {
   const pdb = searchParams.get('pdb') || '';
   const uniprot = searchParams.get('uniprot') || '';
 
-  const [phase, setPhase] = useState<Phase>('idle');
-  const [extraction, setExtraction] = useState<ArticleExtraction | null>(null);
+  // 页面加载时检查缓存
+  const cached = doi && uniprot ? loadArticleExtraction(doi, uniprot) : null;
+  const [phase, setPhase] = useState<Phase>(cached ? 'done' : 'idle');
+  const [extraction, setExtraction] = useState<ArticleExtraction | null>(
+    cached?.extraction || null,
+  );
+  const [extractedFromCache, setExtractedFromCache] = useState(!!cached);
   const [error, setError] = useState<string | null>(null);
   const [added, setAdded] = useState(() => isInSummary(doi, uniprot));
   const abortRef = useRef<AbortController | null>(null);
+
+  // 提取完成后自动存入历史
+  useEffect(() => {
+    if (phase === 'done' && extraction && doi && uniprot && !extractedFromCache) {
+      saveArticleExtraction({
+        id: `${doi}-${uniprot}-${Date.now()}`,
+        doi,
+        pdbId: pdb,
+        uniprot,
+        title: doi || pdb || uniprot,
+        extraction,
+        timestamp: Date.now(),
+      });
+      setExtractedFromCache(false);
+    }
+  }, [phase, extraction, doi, pdb, uniprot, extractedFromCache]);
 
   const handleUpload = useCallback(
     async (mainPdf: File, suppPdf?: File | null) => {
@@ -31,6 +56,7 @@ export function ArticleSearchPage() {
 
       setPhase('extracting');
       setError(null);
+      setExtractedFromCache(false);
       try {
         const result = await extractPdf(mainPdf, suppPdf, controller.signal);
         if (controller.signal.aborted) return;
@@ -131,6 +157,11 @@ export function ArticleSearchPage() {
       {/* 结果 */}
       {extraction && (
         <>
+          {extractedFromCache && (
+            <div style={{ padding: 'var(--space-sm) var(--space-md)', marginBottom: 'var(--space-md)', background: '#EDF3F7', borderRadius: 'var(--radius-md)', fontSize: 'var(--text-xs)', color: 'var(--color-text-secondary)' }}>
+              📦 从历史记录恢复。如需重新提取，请上传新 PDF。
+            </div>
+          )}
           <ExtractionResult extraction={extraction} />
           <div style={{ display: 'flex', gap: 'var(--space-md)', marginTop: 'var(--space-xl)', marginBottom: 'var(--space-2xl)' }}>
             <button onClick={handleBack} style={btnSecondary}>← 返回搜索结果</button>
