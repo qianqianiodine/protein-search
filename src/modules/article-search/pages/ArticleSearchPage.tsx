@@ -23,6 +23,7 @@ export function ArticleSearchPage() {
   const pdb = pdbRaw; // 保持原始字符串用于存储（可能逗号分隔多个 ID）
   const pdbIds = pdbRaw ? pdbRaw.split(',').filter(Boolean) : [];
   const uniprot = searchParams.get('uniprot') || '';
+  const proteinName = searchParams.get('proteinName') || '';
   const paperTitle = searchParams.get('title') || '';
 
   // 页面加载时检查缓存
@@ -44,6 +45,7 @@ export function ArticleSearchPage() {
         doi,
         pdbId: pdb,
         uniprot,
+        proteinName,
         title: doi || pdb || uniprot,
         extraction,
         timestamp: Date.now(),
@@ -86,6 +88,7 @@ export function ArticleSearchPage() {
       doi,
       pdbId: pdb,
       uniprot,
+      proteinName,
       title: doi || pdb || uniprot,
       extraction,
       addedAt: Date.now(),

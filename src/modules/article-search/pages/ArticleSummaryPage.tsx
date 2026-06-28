@@ -45,33 +45,67 @@ export function ArticleSummaryPage() {
     return text.length > 100 ? text.slice(0, 100) + '...' : text;
   };
 
-  /** 导出 Excel */
+  /** 板块 → Excel 深色字体映射 */
+  const EXCEL_FONT_COLORS: Record<string, string> = {
+    construct: '4A6A8A',
+    expression: '3A6B3A',
+    purification: '8A6A4A',
+    crystallization: '6A4A8A',
+  };
+
+  /** 将 Markdown 转为 xlsx 富文本 XML（<si>...</si>） */
+  const markdownToRichXml = (md: string, section: string): string => {
+    const color = EXCEL_FONT_COLORS[section] || '4A6A8A';
+    const segments = md.split(/(\*\*.*?\*\*)/g);
+    const runs: string[] = [];
+    for (const seg of segments) {
+      if (!seg) continue;
+      const m = seg.match(/^\*\*(.*?)\*\*$/);
+      if (m) {
+        const txt = escapeXml(m[1]);
+        if (/\d/.test(txt)) {
+          runs.push(`<r><rPr><b/><color rgb="FF${color}"/></rPr><t>${txt}</t></r>`);
+        } else {
+          runs.push(`<r><rPr><b/></rPr><t>${txt}</t></r>`);
+        }
+      } else {
+        runs.push(`<r><t>${escapeXml(seg)}</t></r>`);
+      }
+    }
+    return `<si>${runs.join('')}</si>`;
+  };
+
+  /** XML 特殊字符转义 */
+  const escapeXml = (s: string): string =>
+    s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+  /** 导出 Excel（富文本：加粗 + 板块色字体） */
   const handleExportExcel = () => {
-    const proteinName = entries[0]?.pdbId || entries[0]?.uniprot || '未知蛋白';
+    const proteinName = entries[0]?.proteinName || entries[0]?.uniprot || entries[0]?.pdbId || '未知蛋白';
     const date = new Date().toISOString().slice(0, 10);
     const filename = `${proteinName}_纯化表达文献汇总_${date}.xlsx`;
 
-    const data = entries.map((e) => ({
-      '文献': e.doi || e.title || e.pdbId || e.uniprot,
-      'PDB': e.pdbId,
-      '蛋白构建': stripMarkdown(e.extraction.construct),
-      '表达': stripMarkdown(e.extraction.expression),
-      '纯化': stripMarkdown(e.extraction.purification),
-      '结晶': stripMarkdown(e.extraction.crystallization),
-    }));
+    // 表头
+    const header = ['文献', 'PDB', '蛋白构建', '表达', '纯化', '结晶'];
 
-    const ws = XLSX.utils.json_to_sheet(data);
+    // 构建数据行，版块列用富文本 cell 对象
+    const rows: Array<Array<string | { t: string; v: string; r: string }>> = [header];
+    for (const e of entries) {
+      rows.push([
+        e.doi || e.title || e.pdbId || e.uniprot,
+        e.pdbId,
+        { t: 's', v: stripMarkdown(e.extraction.construct), r: markdownToRichXml(e.extraction.construct, 'construct') },
+        { t: 's', v: stripMarkdown(e.extraction.expression), r: markdownToRichXml(e.extraction.expression, 'expression') },
+        { t: 's', v: stripMarkdown(e.extraction.purification), r: markdownToRichXml(e.extraction.purification, 'purification') },
+        { t: 's', v: stripMarkdown(e.extraction.crystallization), r: markdownToRichXml(e.extraction.crystallization, 'crystallization') },
+      ]);
+    }
 
-    // 列宽自适应
-    const colWidths = [
-      { wch: 30 }, // 文献
-      { wch: 12 }, // PDB
-      { wch: 50 }, // 蛋白构建
-      { wch: 50 }, // 表达
-      { wch: 50 }, // 纯化
-      { wch: 50 }, // 结晶
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+
+    ws['!cols'] = [
+      { wch: 30 }, { wch: 12 }, { wch: 50 }, { wch: 50 }, { wch: 50 }, { wch: 50 },
     ];
-    ws['!cols'] = colWidths;
 
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, '汇总对比');

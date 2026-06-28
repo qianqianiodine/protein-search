@@ -46,7 +46,7 @@ export function PdbResultTable({
 
   const handleAnalyze = (doi: string, pdbIds: string[], citationTitle?: string | null) => {
     onBeforeAnalyze?.();
-    const params = new URLSearchParams({ doi, pdb: pdbIds.join(','), uniprot: selectedProtein.accession });
+    const params = new URLSearchParams({ doi, pdb: pdbIds.join(','), uniprot: selectedProtein.accession, proteinName: selectedProtein.name });
     if (citationTitle) {
       params.set('title', citationTitle);
     }
