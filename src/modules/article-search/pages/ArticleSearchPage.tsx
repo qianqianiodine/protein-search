@@ -143,7 +143,7 @@ export function ArticleSearchPage() {
     if (!extraction) return;
     if (added) {
       // 从汇总中移除
-      const entries = loadSummary(); // 需要从文件顶部导入
+      const entries = loadSummary();
       const entry = entries.find((e) => e.doi === doi && e.uniprot === uniprot);
       if (entry) {
         removeFromSummary(entry.id);
