@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { analysisTaskManager } from '../services/analysisTaskManager';
 import { clearPendingPdfs } from '../services/pdfFileCache';
-import { addToSummary, isInSummary } from '../services/summaryStorage';
+import { addToSummary, isInSummary, removeFromSummary, loadSummary } from '../services/summaryStorage';
 import {
   loadArticleExtraction,
   loadArticleExtractionById,
@@ -139,20 +139,31 @@ export function ArticleSearchPage() {
     [doi, pdb, uniprot, proteinName, gene, paperTitle],
   );
 
-  const handleAddToSummary = () => {
+  const handleToggleSummary = () => {
     if (!extraction) return;
-    addToSummary({
-      id: `${doi}-${uniprot}-${Date.now()}`,
-      doi,
-      pdbId: pdb,
-      uniprot,
-      proteinName,
-      gene,
-      title: paperTitle || doi || pdb || uniprot,
-      extraction,
-      addedAt: Date.now(),
-    });
-    setAdded(true);
+    if (added) {
+      // 从汇总中移除
+      const entries = loadSummary(); // 需要从文件顶部导入
+      const entry = entries.find((e) => e.doi === doi && e.uniprot === uniprot);
+      if (entry) {
+        removeFromSummary(entry.id);
+      }
+      setAdded(false);
+    } else {
+      const id = `${doi}-${uniprot}-${Date.now()}`;
+      addToSummary({
+        id,
+        doi,
+        pdbId: pdb,
+        uniprot,
+        proteinName,
+        gene,
+        title: paperTitle || extraction.paperTitle || doi || pdb || uniprot,
+        extraction,
+        addedAt: Date.now(),
+      });
+      setAdded(true);
+    }
   };
 
   const handleBack = () => {
@@ -171,6 +182,7 @@ export function ArticleSearchPage() {
   const card: React.CSSProperties = { background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-lg)', padding: 'var(--space-xl)', marginBottom: 'var(--space-xl)' };
   const btnPrimary: React.CSSProperties = { padding: 'var(--space-md) var(--space-xl)', fontSize: 'var(--text-base)', fontWeight: 500, color: '#fff', background: 'var(--color-primary)', border: 'none', borderRadius: 'var(--radius-md)', cursor: 'pointer' };
   const btnSecondary: React.CSSProperties = { ...btnPrimary, background: 'var(--color-surface)', color: 'var(--color-text)', border: '1px solid var(--color-border)' };
+  const btnSm: React.CSSProperties = { padding: 'var(--space-xs) var(--space-md)', fontSize: 'var(--text-xs)', fontWeight: 500, color: 'var(--color-text-secondary)', background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', cursor: 'pointer' };
   const btnSuccess: React.CSSProperties = { ...btnPrimary, background: '#7D9DB5' };
   const errBox: React.CSSProperties = { marginTop: 'var(--space-md)', padding: 'var(--space-md)', color: 'var(--color-danger)', background: 'var(--color-danger-bg)', borderRadius: 'var(--radius-md)', fontSize: 'var(--text-sm)' };
   const paramRow: React.CSSProperties = { display: 'flex', gap: 'var(--space-xl)', flexWrap: 'wrap', marginBottom: 'var(--space-md)' };
@@ -254,28 +266,15 @@ export function ArticleSearchPage() {
         <div style={card}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-lg)' }}>
             <h2 style={{ fontSize: 'var(--text-base)', fontWeight: 600 }}>上传文献</h2>
-            <button onClick={handleBack} style={btnSecondary}>← 返回搜索结果</button>
+            <div style={{ display: 'flex', gap: 'var(--space-sm)' }}>
+              <button onClick={handleBack} style={btnSm}>← 返回搜索</button>
+              <button onClick={() => navigate(`/article-summary?uniprot=${encodeURIComponent(uniprot)}&gene=${encodeURIComponent(gene)}`)} style={btnSm}>← 返回汇总</button>
+            </div>
           </div>
           <PdfUploader onUpload={handleUpload} disabled={phase === 'extracting'} />
           {phase === 'extracting' && (
             <div style={{ textAlign: 'center', padding: 'var(--space-xl)', color: 'var(--color-text-secondary)' }}>
               <div>⏳ 正在解析 PDF 并提取信息（可能需要 1-2 分钟）...</div>
-              <button
-                onClick={handleBack}
-                style={{
-                  marginTop: 'var(--space-lg)',
-                  padding: 'var(--space-sm) var(--space-lg)',
-                  fontSize: 'var(--text-sm)',
-                  fontWeight: 500,
-                  color: 'var(--color-text)',
-                  background: 'var(--color-surface)',
-                  border: '1px solid var(--color-border)',
-                  borderRadius: 'var(--radius-md)',
-                  cursor: 'pointer',
-                }}
-              >
-                ← 返回搜索结果（分析将在后台继续）
-              </button>
             </div>
           )}
           {error && <div style={errBox}>{error}</div>}
@@ -303,11 +302,10 @@ export function ArticleSearchPage() {
           <ExtractionResult extraction={extraction} />
           <div style={{ display: 'flex', gap: 'var(--space-md)', marginTop: 'var(--space-xl)', marginBottom: 'var(--space-2xl)' }}>
             <button onClick={handleReset} style={btnSecondary}>🔄 重新上传</button>
-            <button onClick={handleBack} style={btnSecondary}>← 返回搜索结果</button>
             {added ? (
-              <button disabled style={{ ...btnSuccess, opacity: 0.7, cursor: 'default' }}>✓ 已加入汇总</button>
+              <button onClick={handleToggleSummary} style={btnSuccess}>✓ 已加入汇总（点击取消）</button>
             ) : (
-              <button onClick={handleAddToSummary} style={btnSecondary}>📊 加入汇总</button>
+              <button onClick={handleToggleSummary} style={btnSecondary}>📊 加入汇总</button>
             )}
             {added && (
               <button onClick={() => navigate(`/article-summary?uniprot=${encodeURIComponent(uniprot)}&gene=${encodeURIComponent(gene)}`)} style={btnPrimary}>查看汇总对比</button>
