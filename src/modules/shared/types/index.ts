@@ -55,6 +55,9 @@ export interface EntityCoverage {
   uniprotAccession: string | null;    // 匹配到的 UniProt accession
   organism: string;                   // 表达/来源生物
   sequence: string;                   // 一级序列 (entity_poly.rcsb_seq_one_letter_code)
+  /** 结构覆盖的残基范围（UniProt 编号） */
+  uniprotStart: number | null;
+  uniprotEnd: number | null;
   /** 特征区域 (Pfam 等) */
   features: StructureFeature[];
   /** 序列覆盖比例 0-1 */
@@ -173,6 +176,8 @@ export interface RcsbPolymerEntityResponse {
     rcsb_entity_polymer_type?: string;
     rcsb_seq_one_letter_code?: string;
     rcsb_uniprot_alignments?: Array<{
+      beg_seq_id?: number;
+      end_seq_id?: number;
       feature_positions?: Array<{
         beg_seq_id?: number;
         end_seq_id?: number;

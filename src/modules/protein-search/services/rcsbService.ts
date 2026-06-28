@@ -224,6 +224,11 @@ function parsePolymerEntity(poly: RcsbPolymerEntityResponse): EntityCoverage {
     }
   }
 
+  // 提取 UniProt 比对残基范围（取第一条 alignment 的 beg/end）
+  const primaryAlign = alignments[0];
+  const uniprotStart = primaryAlign?.beg_seq_id ?? null;
+  const uniprotEnd = primaryAlign?.end_seq_id ?? null;
+
   return {
     entityId: poly.rcsb_polymer_entity_container_identifiers?.entity_id || 0,
     chainId: poly.entity_poly?.pdbx_strand_id || '-',
@@ -232,6 +237,8 @@ function parsePolymerEntity(poly: RcsbPolymerEntityResponse): EntityCoverage {
     organism:
       poly.rcsb_entity_source_organism?.[0]?.ncbi_scientific_name || '-',
     sequence: poly.entity_poly?.rcsb_seq_one_letter_code || '',
+    uniprotStart,
+    uniprotEnd,
     features,
     coverageRatio,
   };

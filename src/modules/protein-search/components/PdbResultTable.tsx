@@ -99,6 +99,11 @@ export function PdbResultTable({
                     <div key={i} className={styles.structMeta}>
                       <span className={styles.chainLabel}>Chain {c.chainId}</span>
                       <span className={styles.orgName}>{c.organism}</span>
+                      {c.uniprotStart != null && c.uniprotEnd != null && (
+                        <div className={styles.residueRange}>
+                          aa {c.uniprotStart}-{c.uniprotEnd}
+                        </div>
+                      )}
                       {c.features.length > 0 && (
                         <div className={styles.features}>
                           {c.features.map((f) => `${f.name}:${f.start}-${f.end}`).join(', ')}
