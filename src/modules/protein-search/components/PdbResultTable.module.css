@@ -33,7 +33,7 @@
   user-select: none;
 }
 
-.th:last-child {
+.thLast {
   border-right: none;
 }
 
@@ -44,7 +44,7 @@
   border-right: 1px solid var(--color-border);
 }
 
-.td:last-child {
+.tdLast {
   border-right: none;
 }
 

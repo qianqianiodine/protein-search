@@ -63,7 +63,7 @@ export function PdbResultTable({
             <th className={styles.th}>结构范围</th>
             <th className={styles.th}>文献</th>
             <th className={styles.th}>配体</th>
-            <th className={styles.th} style={{ width: 60 }}>分析</th>
+            <th className={`${styles.th} ${styles.thLast}`} style={{ width: 60 }}>分析</th>
           </tr>
         </thead>
         <tbody className={styles.tbody}>
@@ -137,7 +137,7 @@ export function PdbResultTable({
                 </td>
                 {/* 分析列 — 首行带 rowSpan 合并 */}
                 {dg.showDoi && (
-                  <td className={`${styles.td} ${styles.analyzeCell}`} rowSpan={dg.rowSpan}>
+                  <td className={`${styles.td} ${styles.tdLast} ${styles.analyzeCell}`} rowSpan={dg.rowSpan}>
                     {s.doi ? (
                       <button
                         className={styles.analyzeBtn}
