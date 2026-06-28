@@ -38,6 +38,13 @@ export function loadArticleExtraction(
   ) || null;
 }
 
+/** 按唯一 ID 查找缓存（无 DOI 文献的兜底方案） */
+export function loadArticleExtractionById(
+  id: string,
+): ArticleHistoryEntry | null {
+  return loadAllArticleHistory().find((e) => e.id === id) || null;
+}
+
 /** 保存提取结果，相同 doi+uniprot 覆盖旧条目 */
 export function saveArticleExtraction(entry: ArticleHistoryEntry): void {
   const history = loadAllArticleHistory();

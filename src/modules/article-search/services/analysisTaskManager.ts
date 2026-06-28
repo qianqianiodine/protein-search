@@ -144,9 +144,15 @@ class AnalysisTaskManager {
       task.status = 'completed';
       task.completedAt = Date.now();
 
+      // 如果前端没传 paperTitle，用后端从 PDF 提取的标题兜底
+      const effectiveTitle = task.metadata.paperTitle || result.paperTitle || '';
+      if (effectiveTitle && !task.metadata.paperTitle) {
+        task.metadata.paperTitle = effectiveTitle;
+      }
+
       // 自动保存到 localStorage
-      const { doi, pdb, uniprot, proteinName, gene, paperTitle } = task.metadata;
-      if (doi && uniprot) {
+      const { doi, pdb, uniprot, proteinName, gene } = task.metadata;
+      if (uniprot) {
         saveArticleExtraction({
           id: task.id,
           doi,
@@ -154,7 +160,7 @@ class AnalysisTaskManager {
           uniprot,
           proteinName,
           gene,
-          title: paperTitle || doi || pdb || uniprot,
+          title: effectiveTitle || doi || pdb || uniprot,
           extraction: result,
           timestamp: Date.now(),
         });

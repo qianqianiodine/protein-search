@@ -5,6 +5,7 @@ import { clearPendingPdfs } from '../services/pdfFileCache';
 import { addToSummary, isInSummary } from '../services/summaryStorage';
 import {
   loadArticleExtraction,
+  loadArticleExtractionById,
 } from '../services/articleHistoryService';
 import { PdfUploader } from '../components/PdfUploader';
 import { ExtractionResult } from '../components/ExtractionResult';
@@ -24,9 +25,14 @@ export function ArticleSearchPage() {
   const proteinName = searchParams.get('proteinName') || '';
   const gene = searchParams.get('gene') || '';
   const paperTitle = searchParams.get('title') || '';
+  const extractionId = searchParams.get('extractionId') || '';
 
-  // 页面加载时检查缓存
-  const cached = doi && uniprot ? loadArticleExtraction(doi, uniprot) : null;
+  // 页面加载时检查缓存（优先按 ID 查找，无 DOI 时用 extractionId）
+  const cached = (doi && uniprot)
+    ? loadArticleExtraction(doi, uniprot)
+    : extractionId
+      ? loadArticleExtractionById(extractionId)
+      : null;
   const [phase, setPhase] = useState<Phase>(cached ? 'done' : 'idle');
   const [extraction, setExtraction] = useState<ArticleExtraction | null>(
     cached?.extraction || null,
@@ -38,7 +44,12 @@ export function ArticleSearchPage() {
 
   // Bug③修复：当 doi/uniprot 变化时（如同页面从通知跳转到不同文献），重置所有状态
   useEffect(() => {
-    const newCached = doi && uniprot ? loadArticleExtraction(doi, uniprot) : null;
+    // 先按 ID 查找（无 DOI 时用），再按 doi+uniprot 查找
+    const newCached = (doi && uniprot)
+      ? loadArticleExtraction(doi, uniprot)
+      : extractionId
+        ? loadArticleExtractionById(extractionId)
+        : null;
     if (newCached) {
       setExtraction(newCached.extraction);
       setPhase('done');
@@ -46,7 +57,11 @@ export function ArticleSearchPage() {
       setAdded(isInSummary(doi, uniprot));
       setError(null);
     } else {
-      const existingTask = doi && uniprot ? analysisTaskManager.getTaskByMetadata(doi, uniprot) : undefined;
+      const existingTask = doi && uniprot
+        ? analysisTaskManager.getTaskByMetadata(doi, uniprot)
+        : extractionId
+          ? analysisTaskManager.getTask(extractionId)
+          : undefined;
       if (existingTask?.status === 'completed' && existingTask.extraction) {
         setExtraction(existingTask.extraction);
         setPhase('done');
@@ -73,7 +88,7 @@ export function ArticleSearchPage() {
     }
     // Bug①修复：切换文献时清除旧 PDF 缓存
     clearPendingPdfs();
-  }, [doi, uniprot]);
+  }, [doi, uniprot, extractionId]);
 
   // Bug①修复：离开页面时清除 PDF 缓存
   useEffect(() => {
@@ -159,6 +174,7 @@ export function ArticleSearchPage() {
   const btnSuccess: React.CSSProperties = { ...btnPrimary, background: '#7D9DB5' };
   const errBox: React.CSSProperties = { marginTop: 'var(--space-md)', padding: 'var(--space-md)', color: 'var(--color-danger)', background: 'var(--color-danger-bg)', borderRadius: 'var(--radius-md)', fontSize: 'var(--text-sm)' };
   const paramRow: React.CSSProperties = { display: 'flex', gap: 'var(--space-xl)', flexWrap: 'wrap', marginBottom: 'var(--space-md)' };
+  const proteinInfoCard: React.CSSProperties = { background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-lg)', padding: 'var(--space-lg) var(--space-xl)', marginBottom: 'var(--space-xl)', display: 'flex', alignItems: 'center', gap: 'var(--space-xl)', flexWrap: 'wrap' };
   const paramLabel: React.CSSProperties = { fontSize: 'var(--text-xs)', color: 'var(--color-text-secondary)' };
   const paramValue: React.CSSProperties = { fontSize: 'var(--text-sm)', fontFamily: 'var(--font-mono)', color: 'var(--color-text)' };
 
@@ -173,42 +189,65 @@ export function ArticleSearchPage() {
         </p>
       </header>
 
-      {/* 参数卡片 */}
-      <div style={card}>
-        <h2 style={{ fontSize: 'var(--text-base)', fontWeight: 600, marginBottom: paperTitle ? 'var(--space-sm)' : 'var(--space-lg)' }}>来源</h2>
-        {paperTitle && (
-          <div style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text)', fontWeight: 500, marginBottom: 'var(--space-lg)', lineHeight: 1.5 }}>
-            {paperTitle}
-          </div>
-        )}
-        <div style={paramRow}>
-          {doi && (
-            <div>
-              <div style={paramLabel}>DOI</div>
-              <a style={{ ...paramValue, color: 'var(--color-primary)' }} href={`https://doi.org/${doi}`} target="_blank" rel="noopener noreferrer">{doi}</a>
+      {/* 参数卡片 / 蛋白信息栏 */}
+      {(doi || pdbIds.length > 0) ? (
+        <div style={card}>
+          <h2 style={{ fontSize: 'var(--text-base)', fontWeight: 600, marginBottom: paperTitle ? 'var(--space-sm)' : 'var(--space-lg)' }}>来源</h2>
+          {paperTitle && (
+            <div style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text)', fontWeight: 500, marginBottom: 'var(--space-lg)', lineHeight: 1.5 }}>
+              {paperTitle}
             </div>
           )}
-          {pdbIds.length > 0 && (
+          <div style={paramRow}>
+            {doi && (
+              <div>
+                <div style={paramLabel}>DOI</div>
+                <a style={{ ...paramValue, color: 'var(--color-primary)' }} href={`https://doi.org/${doi}`} target="_blank" rel="noopener noreferrer">{doi}</a>
+              </div>
+            )}
+            {pdbIds.length > 0 && (
+              <div>
+                <div style={paramLabel}>PDB ID</div>
+                <span style={paramValue}>
+                  {pdbIds.map((id, i) => (
+                    <span key={id}>
+                      {i > 0 && ', '}
+                      <a style={{ color: 'var(--color-primary)' }} href={`https://www.rcsb.org/structure/${id}`} target="_blank" rel="noopener noreferrer">{id}</a>
+                    </span>
+                  ))}
+                </span>
+              </div>
+            )}
+            {uniprot && (
+              <div>
+                <div style={paramLabel}>UniProt</div>
+                <span style={paramValue}>{uniprot}</span>
+              </div>
+            )}
+          </div>
+        </div>
+      ) : (
+        <div style={proteinInfoCard}>
+          {gene && (
             <div>
-              <div style={paramLabel}>PDB ID</div>
-              <span style={paramValue}>
-                {pdbIds.map((id, i) => (
-                  <span key={id}>
-                    {i > 0 && ', '}
-                    <a style={{ color: 'var(--color-primary)' }} href={`https://www.rcsb.org/structure/${id}`} target="_blank" rel="noopener noreferrer">{id}</a>
-                  </span>
-                ))}
-              </span>
+              <span style={{ fontWeight: 600, fontSize: 'var(--text-base)' }}>{gene}</span>
+              {proteinName && (
+                <span style={{ color: 'var(--color-text-secondary)', marginLeft: 'var(--space-sm)', fontSize: 'var(--text-sm)' }}>
+                  ({proteinName})
+                </span>
+              )}
             </div>
           )}
           {uniprot && (
-            <div>
-              <div style={paramLabel}>UniProt</div>
-              <span style={paramValue}>{uniprot}</span>
-            </div>
+            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-sm)', color: 'var(--color-primary)', fontWeight: 500 }}>
+              {uniprot}
+            </span>
+          )}
+          {!gene && !uniprot && (
+            <span style={{ color: 'var(--color-text-secondary)', fontSize: 'var(--text-sm)' }}>未关联蛋白</span>
           )}
         </div>
-      </div>
+      )}
 
       {/* 上传 + 提取 */}
       {!extraction && (

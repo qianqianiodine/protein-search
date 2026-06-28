@@ -71,6 +71,8 @@ export function NotificationStack() {
       if (proteinName) params.set('proteinName', proteinName);
       if (gene) params.set('gene', gene);
       if (paperTitle) params.set('title', paperTitle);
+      // 无 DOI 时传 extractionId，确保跳转后能通过 ID 找到缓存
+      if (!doi) params.set('extractionId', task.id);
       analysisTaskManager.dismissTask(task.id);
       navigate(`/article-search?${params.toString()}`);
     },
@@ -97,11 +99,10 @@ export function NotificationStack() {
         >
           <span style={{ flexShrink: 0, fontWeight: 600, fontSize: '1.1em' }}>✓</span>
           <span>
-            {task.metadata.paperTitle
-              ? firstNWords(task.metadata.paperTitle, 10)
-              : task.metadata.doi
-                ? firstNWords(task.metadata.doi, 10)
-                : '分析完成'}
+            {(() => {
+              const title = task.metadata.paperTitle || task.extraction?.paperTitle || task.metadata.doi;
+              return title ? firstNWords(title, 10) : '分析完成';
+            })()}
           </span>
         </div>
       ))}

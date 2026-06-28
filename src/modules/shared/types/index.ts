@@ -246,6 +246,8 @@ export interface ArticleExtraction {
   crystallization: string;   // Markdown — 结晶条件
   verified: boolean;         // 论文是否与预期DOI/PDB/UniProt匹配
   verificationNote: string;  // 验证说明
+  /** 后端从 PDF 提取的论文标题（无 PDB 文献兜底用） */
+  paperTitle?: string;
   /** DeepSeek 生成的各板块一行摘要（可选，兼容旧缓存） */
   summaries?: {
     construct: string;
