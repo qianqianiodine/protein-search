@@ -1,20 +1,10 @@
-import { useCallback, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   analysisTaskManager,
   type AnalysisTask,
 } from '../../article-search/services/analysisTaskManager';
 import { previewText } from '../utils/markdown';
-
-// ---- external store adapter ----
-
-function subscribe(cb: () => void): () => void {
-  return analysisTaskManager.subscribe(cb);
-}
-
-function getSnapshot(): AnalysisTask[] {
-  return analysisTaskManager.getCompletedTasks();
-}
 
 // ---- styles ----
 
@@ -51,8 +41,16 @@ const card: React.CSSProperties = {
 // ---- component ----
 
 export function NotificationStack() {
-  const completedTasks = useSyncExternalStore(subscribe, getSnapshot);
+  const [completedTasks, setCompletedTasks] = useState<AnalysisTask[]>(() =>
+    analysisTaskManager.getCompletedTasks(),
+  );
   const navigate = useNavigate();
+
+  useEffect(() => {
+    return analysisTaskManager.subscribe(() => {
+      setCompletedTasks(analysisTaskManager.getCompletedTasks());
+    });
+  }, []);
 
   const handleClick = useCallback(
     (task: AnalysisTask) => {
