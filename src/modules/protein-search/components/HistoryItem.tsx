@@ -42,8 +42,9 @@ export function HistoryItem({ entry, onRestore, onDelete }: HistoryItemProps) {
               }
             }}
             title="删除"
+            aria-label="删除"
           >
-            🗑
+            ×
           </button>
         </div>
       </div>

@@ -62,14 +62,16 @@
   background: none;
   border: none;
   cursor: pointer;
-  font-size: 0.85rem;
-  color: var(--color-text-muted);
-  padding: 2px;
+  font-size: 1.1rem;
+  font-weight: 400;
+  color: #d4a0a0;
+  padding: 0 4px;
   line-height: 1;
   border-radius: var(--radius-sm);
-  transition: color var(--transition-fast);
+  transition: color 0.15s, background 0.15s;
 }
 
 .deleteBtn:hover {
-  color: var(--color-danger);
+  color: #c0392b;
+  background: #fce8e8;
 }

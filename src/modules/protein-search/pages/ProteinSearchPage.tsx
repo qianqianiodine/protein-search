@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { SearchBar } from '../components/SearchBar';
 import { UniProtSuggestions } from '../components/UniProtSuggestions';
 import { PdbResultTable } from '../components/PdbResultTable';
@@ -27,6 +28,7 @@ type Phase =
   | 'results';
 
 export function ProteinSearchPage() {
+  const navigate = useNavigate();
   const [phase, setPhase] = useState<Phase>('idle');
   const [candidates, setCandidates] = useState<UniProtCandidate[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -226,9 +228,14 @@ export function ProteinSearchPage() {
             检索 UniProt 蛋白，查看 RCSB PDB 晶体结构，识别配体类型
           </p>
         </div>
-        <button style={histBtn} onClick={() => { setHistory(loadHistory()); setHistoryOpen(true); }}>
-          📋 历史 ({history.length})
-        </button>
+        <div style={{ display: 'flex', gap: 'var(--space-sm)' }}>
+          <button style={histBtn} onClick={() => navigate('/article-summary')}>
+            📊 汇总对比
+          </button>
+          <button style={histBtn} onClick={() => { setHistory(loadHistory()); setHistoryOpen(true); }}>
+            📋 历史 ({history.length})
+          </button>
+        </div>
       </header>
 
       <div ref={searchCardRef} style={{ ...card, ...mb }}>
