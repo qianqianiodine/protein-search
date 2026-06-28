@@ -1,6 +1,11 @@
 # Learnings — 被纠正过的坑（只追加，最新在上）
 
 >
+## 2026-06-28 Windows Git Bash 里 taskkill /PID 不可用
+- 坑：Git Bash 会把 `/PID` 当作文件系统路径转换为 `D:/Git/PID`，`taskkill /PID 1234 /F` 永远报「无效参数」
+- 纠正：用 `powershell -Command "Stop-Process -Id <pid> -Force"` 替代，不会被 Bash 拦截
+- 为什么：这是第三次踩同一个坑，每次浪费 5+ 轮尝试。`cmd //c` 也救不了 `/PID` 参数。**铁律：Windows 杀进程只用 PowerShell**
+
 ## 2026-06-28 React Router 同路由切换时 useState 不重置
 - 坑：从通知卡片 `navigate('/article-search?doi=B')` 跳转时，如果当前已在 `/article-search?doi=A`，React Router 不会卸载重挂载组件，`useState` 初始值（依赖首次渲染时的 `searchParams`）不会重新计算，导致页面显示旧文献的状态
 - 纠正：加 `useEffect([doi, uniprot])` 监听 URL 参数变化，手动重置 `phase`/`extraction`/`error` 等全部相关 state，并查 localStorage + taskManager 恢复当前文献的正确数据
