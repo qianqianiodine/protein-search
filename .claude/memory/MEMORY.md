@@ -21,17 +21,9 @@
 ## 目录结构
 ```
 src/modules/
-  protein-search/        ← 蛋白搜索（核心）
-    components/          ← PdbResultTable, SearchBar, LigandCell, HistoryDrawer
-    config/              ← 配体分类规则 ligand-classification.ts
-    pages/               ← ProteinSearchPage
-    services/            ← uniprotService, rcsbService, searchHistoryService, speciesCodes
-    utils/               ← tableSortUtils
-  article-search/        ← 文献分析
-    components/          ← PdfUploader, ExtractionResult, AnnotationToolbar
-    pages/               ← ArticleSearchPage, ArticleSummaryPage
-    services/            ← extractionService, summaryStorage, articleHistoryService, pdfFileCache
-  shared/                ← types/index.ts, utils/markdown.ts, services/api.ts
+  protein-search/        ← 核心：components/ config/ pages/ services/ utils/
+  article-search/        ← 文献：components/ pages/ services/
+  shared/                ← types/, utils/markdown.ts, services/api.ts
 ```
 
 ## API
@@ -41,9 +33,9 @@ src/modules/
 - 后端: `POST http://localhost:8765/api/extract` — PDF 文献提取
 
 ## 后端文献提取链路
-PDF → PyMuPDF 全文 → 正则截 Methods 章节（`_extract_methods_section` → 失败用 `_extract_methods_by_density` → 失败发全文）→ `_build_meta_section` 生成验证块 → SYSTEM_PROMPT + COMBINED_PROMPT + PDF 文本 → DeepSeek API 一次调用 → JSON 解析 → ArticleExtraction
+PDF → PyMuPDF 全文 → 正则截 Methods 章节（`_extract_methods_section` → 失败用 `_extract_methods_by_density` → 失败发全文）→ SYSTEM_PROMPT + COMBINED_PROMPT + PDF 文本 → DeepSeek API 一次调用 → JSON 解析
 
-Token 典型消耗：输入 ~6,500（~290 SYSTEM + ~2,350 COMBINED + 3-5K PDF），输出 ~3,000。单篇 ~$0.0018。
+Token 典型消耗：输入 ~6,500，输出 ~3,000。单篇 ~$0.0018。
 
 ## 配体分类（ligand-classification.ts）
 白名单排除法，四层优先级：
@@ -64,8 +56,7 @@ UniProtCandidate.name → PdbResultTable URL params → ArticleSearchPage 读取
 xlsx cell 对象 `{ t:'s', v:plainText, r:'<si>...</si>' }`，必须用 `aoa_to_sheet`。板块字体色: construct=FF4A6A8A, expression=FF3A6B3A, purification=FF8A6A4A, crystallization=FF6A4A8A。Excel 不支持逐段背景色。
 
 ## 已完成功能
-- protein-search: 完整 — UniProt 搜索 → PDB 表格（配体分类/排序/DOI合并/物种映射27,950条目）
-- article-search: 完整 — PDF 上传 → DeepSeek 提取 → 汇总对比 → Excel 富文本导出
-- 两个模块通过 PdbResultTable "分析"按钮 → URL 参数串联
-- 文献自动缓存（同 doi+uniprot 不重复提取，上限50条）
-- 文献自动匹配验证（DeepSeek 核对 DOI/PDB/UniProt）
+- protein-search: UniProt 搜索 → PDB 表格（配体分类/排序/DOI合并/物种映射27,950条目）
+- article-search: PDF 上传 → DeepSeek 提取 → 汇总对比 → Excel 富文本导出
+- 两模块通过 PdbResultTable "分析"按钮串联
+- 文献自动缓存（同 doi+uniprot 不重复，上限50条）+ 自动匹配验证
