@@ -13,17 +13,48 @@ const COLUMNS: Array<{ key: keyof ArticleExtraction; label: string }> = [
   { key: 'crystallization', label: '结晶' },
 ];
 
+// ---- protein group logic ----
+
+interface ProteinGroup {
+  uniprot: string;
+  gene: string;
+  proteinName: string;
+  count: number;
+}
+
+function buildProteinGroups(entries: SummaryEntry[]): ProteinGroup[] {
+  const map = new Map<string, ProteinGroup>();
+  for (const e of entries) {
+    const key = e.uniprot || e.gene || '__unknown__';
+    if (map.has(key)) {
+      map.get(key)!.count++;
+    } else {
+      map.set(key, { uniprot: e.uniprot, gene: e.gene, proteinName: e.proteinName, count: 1 });
+    }
+  }
+  return [...map.values()];
+}
+
 export function ArticleSummaryPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const filterUniprot = searchParams.get('uniprot') || '';
-  const filterGene = searchParams.get('gene') || '';
+  const initialUniprot = searchParams.get('uniprot') || '';
 
   const allEntries = loadSummary();
+  const proteinGroups = useMemo(() => buildProteinGroups(allEntries), [allEntries]);
+
+  const [selectedUniprot, setSelectedUniprot] = useState<string>(
+    initialUniprot && proteinGroups.some((p) => p.uniprot === initialUniprot)
+      ? initialUniprot
+      : proteinGroups[0]?.uniprot || '',
+  );
+
   const entries = useMemo(() => {
-    if (!filterUniprot) return allEntries;
-    return allEntries.filter((e) => e.uniprot === filterUniprot);
-  }, [allEntries, filterUniprot]);
+    if (!selectedUniprot) return [];
+    return allEntries.filter((e) => e.uniprot === selectedUniprot);
+  }, [allEntries, selectedUniprot]);
+
+  const selectedProtein = proteinGroups.find((p) => p.uniprot === selectedUniprot);
 
   const setEntriesRefresh = useState(0)[1];
   const refresh = () => setEntriesRefresh((n) => n + 1);
@@ -37,27 +68,21 @@ export function ArticleSummaryPage() {
   const toggleCell = (id: string) => {
     setExpandedCells((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.add(id);
-      }
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
       return next;
     });
   };
 
   const cellKey = (entryId: string, col: string) => `${entryId}-${col}`;
 
-  /** 获取摘要文本：优先 DeepSeek 摘要，旧缓存兜底用 preview（移除 Markdown 标记） */
   const getSummary = (entry: SummaryEntry, col: (typeof COLUMNS)[0]) => {
     const s = entry.extraction.summaries?.[col.key];
     if (s) return stripMarkdown(s);
-    // 旧缓存兼容：截取前 100 字
     const text = stripMarkdown(entry.extraction[col.key]);
     return text.length > 100 ? text.slice(0, 100) + '...' : text;
   };
 
-  /** 板块 → Excel 深色字体映射 */
   const EXCEL_FONT_COLORS: Record<string, string> = {
     construct: '4A6A8A',
     expression: '3A6B3A',
@@ -65,7 +90,6 @@ export function ArticleSummaryPage() {
     crystallization: '6A4A8A',
   };
 
-  /** 将 Markdown 转为 xlsx 富文本 XML 片段（仅 <r> 元素，无 <si> 包装） */
   const markdownToRichRuns = (md: string, section: string): string => {
     const color = EXCEL_FONT_COLORS[section] || '4A6A8A';
     const segments = md.split(/(\*\*.*?\*\*)/g);
@@ -87,17 +111,14 @@ export function ArticleSummaryPage() {
     return runs.join('');
   };
 
-  /** XML 特殊字符转义 */
   const escapeXml = (s: string): string =>
     s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
-  /** 导出 Excel（富文本：加粗 + 板块色字体，通过 JSZip 后处理 SST XML） */
   const handleExportExcel = async () => {
-    const gene = entries[0]?.gene || entries[0]?.proteinName || entries[0]?.uniprot || entries[0]?.pdbId || '未知蛋白';
+    const gene = selectedProtein?.gene || entries[0]?.gene || entries[0]?.uniprot || '未知蛋白';
     const date = new Date().toISOString().slice(0, 10);
     const filename = `${gene}_纯化表达文献汇总_${date}.xlsx`;
 
-    // 第一步：构建纯文本工作表
     const header = ['文献', 'PDB', '蛋白构建', '表达', '纯化', '结晶'];
     const rows: string[][] = [header];
     for (const e of entries) {
@@ -112,17 +133,12 @@ export function ArticleSummaryPage() {
     }
 
     const ws = XLSX.utils.aoa_to_sheet(rows);
-    ws['!cols'] = [
-      { wch: 30 }, { wch: 12 }, { wch: 50 }, { wch: 50 }, { wch: 50 }, { wch: 50 },
-    ];
+    ws['!cols'] = [{ wch: 30 }, { wch: 12 }, { wch: 50 }, { wch: 50 }, { wch: 50 }, { wch: 50 }];
 
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, '汇总对比');
-
-    // 第二步：用 bookSST: true 写入数组缓冲区
     const wbout = XLSX.write(wb, { type: 'array', bookSST: true });
 
-    // 第三步：构建 plainText → richRuns 映射
     const richTextMap = new Map<string, string>();
     for (const e of entries) {
       for (const col of COLUMNS) {
@@ -133,32 +149,19 @@ export function ArticleSummaryPage() {
       }
     }
 
-    // 第四步：用 JSZip 后处理共享字符串 XML
     const zip = await JSZip.loadAsync(wbout);
     const sstFile = zip.file('xl/sharedStrings.xml');
     if (sstFile) {
       let sstXml = await sstFile.async('string');
-
       for (const [plainText, richRuns] of richTextMap) {
-        const escaped = plainText
-          .replace(/&/g, '&amp;')
-          .replace(/</g, '&lt;')
-          .replace(/>/g, '&gt;')
-          .replace(/"/g, '&quot;');
+        const escaped = plainText.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
         const escapedForRegex = escaped.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-
-        // 替换 <si><t ...>escaped</t></si> 为 <si>richRuns</si>
-        const regex = new RegExp(
-          `<si><t(?: xml:space="preserve")?>${escapedForRegex}</t></si>`,
-          'g'
-        );
+        const regex = new RegExp(`<si><t(?: xml:space="preserve")?>${escapedForRegex}</t></si>`, 'g');
         sstXml = sstXml.replace(regex, `<si>${richRuns}</si>`);
       }
-
       zip.file('xl/sharedStrings.xml', sstXml);
     }
 
-    // 第五步：生成 Blob 并触发下载
     const blob = await zip.generateAsync({ type: 'blob' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -170,7 +173,8 @@ export function ArticleSummaryPage() {
     URL.revokeObjectURL(url);
   };
 
-  if (entries.length === 0) {
+  // ---- empty global state ----
+  if (allEntries.length === 0) {
     const page: React.CSSProperties = { maxWidth: 1000, margin: '0 auto', padding: 'var(--space-2xl)', textAlign: 'center' };
     return (
       <div style={page}>
@@ -186,6 +190,7 @@ export function ArticleSummaryPage() {
     );
   }
 
+  // ---- styles ----
   const page: React.CSSProperties = { maxWidth: 1400, margin: '0 auto', padding: 'var(--space-2xl)' };
   const thStyle: React.CSSProperties = { padding: 'var(--space-md)', fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--color-text)', borderBottom: '2px solid var(--color-border)', textAlign: 'left', whiteSpace: 'nowrap' };
   const tdStyle: React.CSSProperties = { padding: 'var(--space-md)', fontSize: 'var(--text-xs)', lineHeight: 1.6, color: 'var(--color-text)', borderBottom: '1px solid var(--color-border)', verticalAlign: 'top', maxWidth: 300 };
@@ -193,13 +198,32 @@ export function ArticleSummaryPage() {
   const removeBtn: React.CSSProperties = { padding: '2px 8px', fontSize: 'var(--text-xs)', color: 'var(--color-danger)', background: 'transparent', border: '1px solid var(--color-danger)', borderRadius: 'var(--radius-sm)', cursor: 'pointer' };
   const btnSecondary: React.CSSProperties = { padding: 'var(--space-sm) var(--space-lg)', fontSize: 'var(--text-sm)', fontWeight: 500, color: 'var(--color-text)', background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', cursor: 'pointer' };
 
+  const activeProteinCard: React.CSSProperties = {
+    padding: 'var(--space-md) var(--space-lg)',
+    background: 'var(--color-primary)',
+    color: '#fff',
+    borderRadius: 'var(--radius-md)',
+    cursor: 'pointer',
+    border: 'none',
+    textAlign: 'left',
+    minWidth: 180,
+    flexShrink: 0,
+  };
+
+  const inactiveProteinCard: React.CSSProperties = {
+    ...activeProteinCard,
+    background: 'var(--color-surface)',
+    color: 'var(--color-text)',
+    border: '1px solid var(--color-border)',
+  };
+
   return (
     <div style={page}>
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-xl)' }}>
         <div>
           <h1 style={{ fontSize: 'var(--text-xl)', fontWeight: 700, color: 'var(--color-text)' }}>汇总对比</h1>
           <p style={{ color: 'var(--color-text-secondary)', fontSize: 'var(--text-sm)', marginTop: 4 }}>
-            {filterGene ? `${filterGene} · ` : ''}{entries.length} 篇文献
+            {proteinGroups.length} 个蛋白 · {allEntries.length} 篇文献
           </p>
         </div>
         <div style={{ display: 'flex', gap: 'var(--space-md)' }}>
@@ -208,70 +232,95 @@ export function ArticleSummaryPage() {
         </div>
       </header>
 
-      <div style={{ overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-lg)' }}>
-          <thead>
-            <tr>
-              <th style={{ ...thStyle, width: 120 }}>文献</th>
-              <th style={{ ...thStyle, width: 70 }}>PDB</th>
-              {COLUMNS.map((col) => (
-                <th key={col.key} style={thStyle}>{col.label}</th>
-              ))}
-              <th style={{ ...thStyle, width: 60 }}>操作</th>
-            </tr>
-          </thead>
-          <tbody>
-            {entries.map((entry) => (
-              <tr key={entry.id}>
-                <td style={tdStyle}>
-                  {(entry.title && entry.title !== entry.doi && entry.title !== entry.pdbId && entry.title !== entry.uniprot) ? (
-                    <div style={{ fontWeight: 600, fontSize: 'var(--text-xs)', marginBottom: 4 }}>{entry.title}</div>
-                  ) : (
-                    <div style={{ fontWeight: 600, fontSize: 'var(--text-xs)', marginBottom: 4 }}>{entry.pdbId || entry.uniprot}</div>
-                  )}
-                  <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-secondary)', wordBreak: 'break-all' }}>{entry.doi}</div>
-                </td>
-                <td style={{ ...tdStyle, fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)' }}>{entry.pdbId}</td>
-                {COLUMNS.map((col) => {
-                  const ck = cellKey(entry.id, col.key);
-                  const isExpanded = expandedCells.has(ck);
-                  const fullText = entry.extraction[col.key];
-                  const hasSummary = !!entry.extraction.summaries?.[col.key];
-
-                  return (
-                    <td
-                      key={col.key}
-                      style={{ ...tdStyle, cursor: fullText ? 'pointer' : 'default' }}
-                      onClick={() => fullText && toggleCell(ck)}
-                    >
-                      {isExpanded ? (
-                        <div
-                          dangerouslySetInnerHTML={{ __html: renderMarkdown(fullText, col.key) }}
-                        />
-                      ) : (
-                        <div style={summaryStyle}>
-                          {getSummary(entry, col)}
-                          {!hasSummary && fullText.length > 100 && (
-                            <span style={{ color: 'var(--color-primary)', marginLeft: 4 }}>展开</span>
-                          )}
-                        </div>
-                      )}
-                      {isExpanded && (
-                        <span style={{ color: 'var(--color-primary)', fontSize: 'var(--text-xs)', marginTop: 4, display: 'inline-block' }}>
-                          收起
-                        </span>
-                      )}
-                    </td>
-                  );
-                })}
-                <td style={tdStyle}>
-                  <button style={removeBtn} onClick={() => handleRemove(entry.id)}>移除</button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      {/* ---- 蛋白选择面板 ---- */}
+      <div style={{ display: 'flex', gap: 'var(--space-md)', overflowX: 'auto', paddingBottom: 'var(--space-md)', marginBottom: 'var(--space-xl)' }}>
+        {proteinGroups.map((p) => {
+          const isActive = p.uniprot === selectedUniprot;
+          const style = isActive ? activeProteinCard : inactiveProteinCard;
+          return (
+            <button key={p.uniprot} style={style} onClick={() => setSelectedUniprot(p.uniprot)}>
+              <div style={{ fontWeight: 600, fontSize: 'var(--text-sm)' }}>{p.gene || p.uniprot}</div>
+              <div style={{ fontSize: 'var(--text-xs)', opacity: 0.8, marginTop: 2 }}>{p.proteinName}</div>
+              <div style={{ fontSize: 'var(--text-xs)', fontFamily: 'var(--font-mono)', opacity: 0.7, marginTop: 2 }}>{p.uniprot}</div>
+              <div style={{ fontSize: 'var(--text-xs)', fontWeight: 600, marginTop: 6, opacity: isActive ? 1 : 0.6 }}>
+                {p.count} 篇文献
+              </div>
+            </button>
+          );
+        })}
       </div>
+
+      {/* ---- 选中蛋白的文献表格 ---- */}
+      {selectedProtein && entries.length > 0 ? (
+        <>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 'var(--space-sm)', marginBottom: 'var(--space-lg)' }}>
+            <h2 style={{ fontSize: 'var(--text-lg)', fontWeight: 600 }}>
+              {selectedProtein.gene || selectedProtein.uniprot}
+            </h2>
+            <span style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-secondary)' }}>
+              {selectedProtein.proteinName}
+            </span>
+          </div>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-lg)' }}>
+              <thead>
+                <tr>
+                  <th style={{ ...thStyle, width: 120 }}>文献</th>
+                  <th style={{ ...thStyle, width: 70 }}>PDB</th>
+                  {COLUMNS.map((col) => (<th key={col.key} style={thStyle}>{col.label}</th>))}
+                  <th style={{ ...thStyle, width: 60 }}>操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                {entries.map((entry) => (
+                  <tr key={entry.id}>
+                    <td style={tdStyle}>
+                      {(entry.title && entry.title !== entry.doi && entry.title !== entry.pdbId && entry.title !== entry.uniprot) ? (
+                        <div style={{ fontWeight: 600, fontSize: 'var(--text-xs)', marginBottom: 4 }}>{entry.title}</div>
+                      ) : (
+                        <div style={{ fontWeight: 600, fontSize: 'var(--text-xs)', marginBottom: 4 }}>{entry.pdbId || entry.uniprot}</div>
+                      )}
+                      <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-secondary)', wordBreak: 'break-all' }}>{entry.doi}</div>
+                    </td>
+                    <td style={{ ...tdStyle, fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)' }}>{entry.pdbId}</td>
+                    {COLUMNS.map((col) => {
+                      const ck = cellKey(entry.id, col.key);
+                      const isExpanded = expandedCells.has(ck);
+                      const fullText = entry.extraction[col.key];
+                      const hasSummary = !!entry.extraction.summaries?.[col.key];
+                      return (
+                        <td key={col.key} style={{ ...tdStyle, cursor: fullText ? 'pointer' : 'default' }} onClick={() => fullText && toggleCell(ck)}>
+                          {isExpanded ? (
+                            <div dangerouslySetInnerHTML={{ __html: renderMarkdown(fullText, col.key) }} />
+                          ) : (
+                            <div style={summaryStyle}>
+                              {getSummary(entry, col)}
+                              {!hasSummary && fullText.length > 100 && (
+                                <span style={{ color: 'var(--color-primary)', marginLeft: 4 }}>展开</span>
+                              )}
+                            </div>
+                          )}
+                          {isExpanded && (
+                            <span style={{ color: 'var(--color-primary)', fontSize: 'var(--text-xs)', marginTop: 4, display: 'inline-block' }}>收起</span>
+                          )}
+                        </td>
+                      );
+                    })}
+                    <td style={tdStyle}>
+                      <button style={removeBtn} onClick={() => handleRemove(entry.id)}>移除</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      ) : (
+        <div style={{ textAlign: 'center', padding: 'var(--space-3xl)', color: 'var(--color-text-secondary)' }}>
+          <p style={{ fontSize: 'var(--text-lg)', marginBottom: 'var(--space-md)' }}>当前未分析文献</p>
+          <p style={{ fontSize: 'var(--text-sm)' }}>在蛋白搜索结果中点击「分析」，提取完成后加入汇总即可在此查看</p>
+        </div>
+      )}
     </div>
   );
 }
