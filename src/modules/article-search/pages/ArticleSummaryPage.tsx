@@ -15,7 +15,7 @@ const COLUMNS: Array<{ key: keyof ArticleExtraction; label: string }> = [
 export function ArticleSummaryPage() {
   const navigate = useNavigate();
   const [entries, setEntries] = useState<SummaryEntry[]>(loadSummary);
-  const [expandedCell, setExpandedCell] = useState<string | null>(null);
+  const [expandedCells, setExpandedCells] = useState<Set<string>>(new Set());
 
   const handleRemove = (id: string) => {
     removeFromSummary(id);
@@ -23,17 +23,25 @@ export function ArticleSummaryPage() {
   };
 
   const toggleCell = (id: string) => {
-    setExpandedCell((prev) => (prev === id ? null : id));
+    setExpandedCells((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
   };
 
   const cellKey = (entryId: string, col: string) => `${entryId}-${col}`;
 
-  /** 获取摘要文本：优先 DeepSeek 摘要，旧缓存兜底用 preview */
+  /** 获取摘要文本：优先 DeepSeek 摘要，旧缓存兜底用 preview（移除 Markdown 标记） */
   const getSummary = (entry: SummaryEntry, col: (typeof COLUMNS)[0]) => {
     const s = entry.extraction.summaries?.[col.key];
-    if (s) return s;
+    if (s) return stripMarkdown(s);
     // 旧缓存兼容：截取前 100 字
-    const text = entry.extraction[col.key];
+    const text = stripMarkdown(entry.extraction[col.key]);
     return text.length > 100 ? text.slice(0, 100) + '...' : text;
   };
 
@@ -128,7 +136,7 @@ export function ArticleSummaryPage() {
                 <td style={{ ...tdStyle, fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)' }}>{entry.pdbId}</td>
                 {COLUMNS.map((col) => {
                   const ck = cellKey(entry.id, col.key);
-                  const isExpanded = expandedCell === ck;
+                  const isExpanded = expandedCells.has(ck);
                   const fullText = entry.extraction[col.key];
                   const hasSummary = !!entry.extraction.summaries?.[col.key];
 

@@ -53,11 +53,17 @@ export function renderMarkdown(md: string, section?: string): string {
   // 2. Markdown → HTML
   let html = marked.parse(preHighlighted, { breaks: true }) as string;
 
-  // 3. <strong> → 板块色 span
+  // 3. <strong> → 板块色 span（只对含数值的高亮；纯文字标题保持原生加粗）
   const cls = HIGHLIGHT_CLASSES[section || ''] || 'hl-construct';
-  html = html
-    .replace(/<strong>/g, `<span class="${cls}">`)
-    .replace(/<\/strong>/g, '</span>');
+  html = html.replace(
+    /<strong>(.*?)<\/strong>/g,
+    (_full: string, text: string) => {
+      if (/\d/.test(text)) {
+        return `<span class="${cls}">${text}</span>`;
+      }
+      return `<strong>${text}</strong>`;
+    },
+  );
 
   // 4. 注入颜色 CSS
   return `<style>${HIGHLIGHT_CSS}</style>${html}`;
