@@ -22,6 +22,17 @@ interface ProteinGroup {
   count: number;
 }
 
+function proteinLabel(p: ProteinGroup): string {
+  const gene = (p.gene || '').trim();
+  if (gene) return gene;
+  const name = (p.proteinName || '').trim();
+  if (name) {
+    const words = name.split(/\s+/).filter(Boolean);
+    return words.slice(0, 2).join(' ');
+  }
+  return p.uniprot || '?';
+}
+
 function buildProteinGroups(entries: SummaryEntry[]): ProteinGroup[] {
   const map = new Map<string, ProteinGroup>();
   for (const e of entries) {
@@ -241,7 +252,7 @@ export function ArticleSummaryPage() {
           const style = isActive ? activeProteinCard : inactiveProteinCard;
           return (
             <button key={p.uniprot} style={style} onClick={() => setSelectedUniprot(p.uniprot)}>
-              {p.gene || p.proteinName?.split(' ').slice(0, 2).join(' ') || p.uniprot} · {p.count} 篇
+              {proteinLabel(p)} · {p.count} 篇
             </button>
           );
         })}
