@@ -36,6 +36,52 @@ export function ArticleSearchPage() {
   const [added, setAdded] = useState(() => isInSummary(doi, uniprot));
   const activeTaskIdRef = useRef<string | null>(null);
 
+  // Bug③修复：当 doi/uniprot 变化时（如同页面从通知跳转到不同文献），重置所有状态
+  useEffect(() => {
+    const newCached = doi && uniprot ? loadArticleExtraction(doi, uniprot) : null;
+    if (newCached) {
+      setExtraction(newCached.extraction);
+      setPhase('done');
+      setExtractedFromCache(true);
+      setAdded(isInSummary(doi, uniprot));
+      setError(null);
+    } else {
+      const existingTask = doi && uniprot ? analysisTaskManager.getTaskByMetadata(doi, uniprot) : undefined;
+      if (existingTask?.status === 'completed' && existingTask.extraction) {
+        setExtraction(existingTask.extraction);
+        setPhase('done');
+        setExtractedFromCache(false);
+        setAdded(isInSummary(doi, uniprot));
+        setError(null);
+      } else if (existingTask?.status === 'running') {
+        setExtraction(null);
+        setPhase('extracting');
+        setExtractedFromCache(false);
+        setError(null);
+        activeTaskIdRef.current = existingTask.id;
+      } else if (existingTask?.status === 'failed') {
+        setExtraction(null);
+        setPhase('idle');
+        setExtractedFromCache(false);
+        setError(existingTask.error || '提取失败');
+      } else {
+        setExtraction(null);
+        setPhase('idle');
+        setExtractedFromCache(false);
+        setError(null);
+      }
+    }
+    // Bug①修复：切换文献时清除旧 PDF 缓存
+    clearPendingPdfs();
+  }, [doi, uniprot]);
+
+  // Bug①修复：离开页面时清除 PDF 缓存
+  useEffect(() => {
+    return () => {
+      clearPendingPdfs();
+    };
+  }, []);
+
   // 监听 taskManager：当前任务完成时更新 UI
   useEffect(() => {
     const unsubscribe = analysisTaskManager.subscribe(() => {
@@ -60,24 +106,6 @@ export function ArticleSearchPage() {
       }
     });
     return unsubscribe;
-  }, [doi, uniprot]);
-
-  // 页面加载时检查 taskManager 中是否有 running/completed 任务
-  useEffect(() => {
-    if (!doi || !uniprot) return;
-    const existingTask = analysisTaskManager.getTaskByMetadata(doi, uniprot);
-    if (!existingTask) return;
-    if (existingTask.status === 'running') {
-      setPhase('extracting');
-      activeTaskIdRef.current = existingTask.id;
-    } else if (existingTask.status === 'completed' && existingTask.extraction) {
-      setPhase('done');
-      setExtraction(existingTask.extraction);
-      setAdded(isInSummary(doi, uniprot));
-    } else if (existingTask.status === 'failed') {
-      setError(existingTask.error || '提取失败');
-      setPhase('idle');
-    }
   }, [doi, uniprot]);
 
   const handleUpload = useCallback(

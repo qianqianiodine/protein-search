@@ -4,19 +4,28 @@ import {
   analysisTaskManager,
   type AnalysisTask,
 } from '../../article-search/services/analysisTaskManager';
-import { previewText } from '../utils/markdown';
+
+// ---- helpers ----
+
+/** 取前 N 个单词（英文按空格分词） */
+function firstNWords(text: string, n: number): string {
+  const words = text.split(/\s+/).filter(Boolean);
+  if (words.length <= n) return text;
+  return words.slice(0, n).join(' ') + '...';
+}
 
 // ---- styles ----
 
 const container: React.CSSProperties = {
   position: 'fixed',
   bottom: 20,
-  right: 20,
+  left: '50%',
+  transform: 'translateX(-50%)',
   zIndex: 10000,
   display: 'flex',
   flexDirection: 'column',
   gap: 10,
-  maxWidth: '50vw',
+  alignItems: 'center',
   pointerEvents: 'none',
 };
 
@@ -35,7 +44,7 @@ const card: React.CSSProperties = {
   lineHeight: 1.5,
   boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
   transition: 'box-shadow 0.15s, transform 0.15s',
-  maxWidth: '50vw',
+  whiteSpace: 'nowrap',
 };
 
 // ---- component ----
@@ -88,9 +97,11 @@ export function NotificationStack() {
         >
           <span style={{ flexShrink: 0, fontWeight: 600, fontSize: '1.1em' }}>✓</span>
           <span>
-            {task.extraction
-              ? previewText(task.extraction.construct)
-              : '分析完成'}
+            {task.metadata.paperTitle
+              ? firstNWords(task.metadata.paperTitle, 10)
+              : task.metadata.doi
+                ? firstNWords(task.metadata.doi, 10)
+                : '分析完成'}
           </span>
         </div>
       ))}
