@@ -241,6 +241,13 @@ export interface ArticleExtraction {
   crystallization: string;   // Markdown — 结晶条件
   verified: boolean;         // 论文是否与预期DOI/PDB/UniProt匹配
   verificationNote: string;  // 验证说明
+  /** DeepSeek 生成的各板块一行摘要（可选，兼容旧缓存） */
+  summaries?: {
+    construct: string;
+    expression: string;
+    purification: string;
+    crystallization: string;
+  };
 }
 
 /** 汇总条目（存入 localStorage） */

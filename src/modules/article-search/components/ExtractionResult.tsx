@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState } from 'react';
 import type { ArticleExtraction } from '../../shared/types';
 import { AnnotationToolbar } from './AnnotationToolbar';
+import { renderMarkdown } from '../../shared/utils/markdown';
 
 const SECTIONS: Array<{ key: keyof ArticleExtraction; label: string }> = [
   { key: 'construct', label: '蛋白构建' },
@@ -36,21 +37,6 @@ function SectionBlock({ title, content }: { title: string; content: string }) {
     },
     [focused],
   );
-
-  const renderMarkdown = (md: string): string => {
-    // 简单 Markdown → HTML（加粗、标题、列表、分隔线）
-    let html = md
-      .replace(/^### (.+)$/gm, '<h4>$1</h4>')
-      .replace(/^## (.+)$/gm, '<h3>$1</h3>')
-      .replace(/^# (.+)$/gm, '<h3>$1</h3>')
-      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-      .replace(/^- (.+)$/gm, '<li>$1</li>')
-      .replace(/(<li>.*<\/li>\n?)+/g, '<ul>$&</ul>')
-      .replace(/^---$/gm, '<hr>')
-      .replace(/\n\n/g, '<br><br>')
-      .replace(/\n/g, '<br>');
-    return html;
-  };
 
   const cardStyle: React.CSSProperties = {
     background: 'var(--color-surface)',
