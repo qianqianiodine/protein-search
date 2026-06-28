@@ -104,11 +104,6 @@ export function PdbResultTable({
                           aa {c.uniprotStart}-{c.uniprotEnd}
                         </div>
                       )}
-                      {c.features.length > 0 && (
-                        <div className={styles.features}>
-                          {c.features.map((f) => `${f.name}:${f.start}-${f.end}`).join(', ')}
-                        </div>
-                      )}
                     </div>
                   ))}
                   {s.resolution && (
