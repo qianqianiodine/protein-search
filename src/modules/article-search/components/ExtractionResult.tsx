@@ -18,13 +18,13 @@ export function ExtractionResult({ extraction }: ExtractionResultProps) {
   return (
     <div>
       {SECTIONS.map(({ key, label }) => (
-        <SectionBlock key={key} title={label} content={extraction[key]} />
+        <SectionBlock key={key} title={label} content={extraction[key]} sectionKey={key} />
       ))}
     </div>
   );
 }
 
-function SectionBlock({ title, content }: { title: string; content: string }) {
+function SectionBlock({ title, content, sectionKey }: { title: string; content: string; sectionKey: string }) {
   const ref = useRef<HTMLDivElement>(null);
   const [focused, setFocused] = useState(false);
 
@@ -73,7 +73,7 @@ function SectionBlock({ title, content }: { title: string; content: string }) {
         style={contentStyle}
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
-        dangerouslySetInnerHTML={{ __html: renderMarkdown(content) }}
+        dangerouslySetInnerHTML={{ __html: renderMarkdown(content, sectionKey) }}
       />
       {focused && (
         <AnnotationToolbar

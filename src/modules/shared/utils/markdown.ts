@@ -1,26 +1,66 @@
 import { marked } from 'marked';
 
-/** 需要高亮的实验关键数值 */
-const HIGHLIGHT_PATTERNS: Array<[RegExp, string]> = [
+/** 四板块柔和莫兰迪色 */
+const HIGHLIGHT_CLASSES: Record<string, string> = {
+  construct: 'hl-construct',
+  expression: 'hl-expression',
+  purification: 'hl-purification',
+  crystallization: 'hl-crystallization',
+};
+
+/** 注入页面的颜色 CSS */
+const HIGHLIGHT_CSS = `
+.hl-construct { background: #D8E2F0; padding: 1px 3px; border-radius: 2px; }
+.hl-expression { background: #D8ECD8; padding: 1px 3px; border-radius: 2px; }
+.hl-purification { background: #F0E4D8; padding: 1px 3px; border-radius: 2px; }
+.hl-crystallization { background: #E4DAF0; padding: 1px 3px; border-radius: 2px; }
+`;
+
+/** 正则兜底模式 — 匹配标准实验数值并用 ** 包裹 */
+const FALLBACK_PATTERNS: Array<[RegExp, string]> = [
   // 温度: 4°C, 37°C, 100 K
-  [/\d+(?:\.\d+)?\s*°C/g, '<mark>$&</mark>'],
-  [/\d+(?:\.\d+)?\s*K\b/g, '<mark>$&</mark>'],
+  [/(\d+(?:\.\d+)?\s*°C)/g, '**$1**'],
+  [/(\d+(?:\.\d+)?\s*K)\b/g, '**$1**'],
   // 浓度: 50 mM, 0.5 mg/mL, 5% (v/v)
-  [/\d+(?:\.\d+)?\s*(?:mM|μM|nM|mg\/mL|μg\/mL|ng\/mL|g\/L|%(?:\s*\([vw]\/[vw]\))?)/g, '<mark>$&</mark>'],
+  [/(\d+(?:\.\d+)?\s*(?:mM|μM|nM|mg\/mL|μg\/mL|ng\/mL|g\/L|%(?:\s*\([vw]\/[vw]\))?))/g, '**$1**'],
   // pH: pH 7.5, pH 8.0-8.5
-  [/pH\s*\d+(?:\.\d+)?(?:\s*[-–—]\s*\d+(?:\.\d+)?)?/gi, '<mark>$&</mark>'],
+  [/(pH\s*\d+(?:\.\d+)?(?:\s*[-–—]\s*\d+(?:\.\d+)?)?)/gi, '**$1**'],
   // 转速/离心力: 200 rpm, 12000 × g
-  [/\d+(?:,\d{3})*(?:\.\d+)?\s*(?:rpm|×\s*g)/g, '<mark>$&</mark>'],
+  [/(\d+(?:,\d{3})*(?:\.\d+)?\s*(?:rpm|×\s*g))/g, '**$1**'],
+  // OD₆₀₀
+  [/(OD[₆6]00\s*(?:=\s*)?\d+(?:\.\d+)?)/gi, '**$1**'],
+  // IPTG 浓度
+  [/(\d+(?:\.\d+)?\s*(?:mM|μM)\s*IPTG)/gi, '**$1**'],
+  // 体积
+  [/(\d+(?:\.\d+)?\s*(?:mL|μL|L))\b/g, '**$1**'],
+  // 时间
+  [/(\d+(?:\.\d+)?\s*(?:h|min|hour|minute)s?)\b/g, '**$1**'],
 ];
 
 /** 渲染 Markdown → HTML，自动高亮关键数值 */
-export function renderMarkdown(md: string): string {
+export function renderMarkdown(md: string, section?: string): string {
   if (!md?.trim()) return '';
-  let html = marked.parse(md, { breaks: true }) as string;
-  for (const [pattern, replacement] of HIGHLIGHT_PATTERNS) {
-    html = html.replace(pattern, replacement);
+
+  // 1. 正则兜底：在非 ** 区域补标已知模式（避免重复标记 DeepSeek 已标的）
+  const segments = md.split(/(\*\*.*?\*\*)/g);
+  for (let i = 0; i < segments.length; i += 2) {
+    for (const [pattern, replacement] of FALLBACK_PATTERNS) {
+      segments[i] = segments[i].replace(pattern, replacement);
+    }
   }
-  return html;
+  const preHighlighted = segments.join('');
+
+  // 2. Markdown → HTML
+  let html = marked.parse(preHighlighted, { breaks: true }) as string;
+
+  // 3. <strong> → 板块色 span
+  const cls = HIGHLIGHT_CLASSES[section || ''] || 'hl-construct';
+  html = html
+    .replace(/<strong>/g, `<span class="${cls}">`)
+    .replace(/<\/strong>/g, '</span>');
+
+  // 4. 注入颜色 CSS
+  return `<style>${HIGHLIGHT_CSS}</style>${html}`;
 }
 
 /** 移除 Markdown 标记，返回纯文本（用于 Excel 导出） */

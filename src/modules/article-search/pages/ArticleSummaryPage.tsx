@@ -140,7 +140,7 @@ export function ArticleSummaryPage() {
                     >
                       {isExpanded ? (
                         <div
-                          dangerouslySetInnerHTML={{ __html: renderMarkdown(fullText) }}
+                          dangerouslySetInnerHTML={{ __html: renderMarkdown(fullText, col.key) }}
                         />
                       ) : (
                         <div style={summaryStyle}>
