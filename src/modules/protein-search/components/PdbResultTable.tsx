@@ -101,7 +101,7 @@ export function PdbResultTable({
                       <span className={styles.orgName}>{c.organism}</span>
                       {c.uniprotStart != null && c.uniprotEnd != null && (
                         <div className={styles.residueRange}>
-                          aa {c.uniprotStart}-{c.uniprotEnd}
+                          {c.uniprotStart}-{c.uniprotEnd} aa
                         </div>
                       )}
                     </div>
