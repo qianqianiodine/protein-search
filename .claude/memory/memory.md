@@ -35,6 +35,8 @@ src/modules/
 ## 后端文献提取链路
 PDF → PyMuPDF 全文 → 正则截 Methods 章节（`_extract_methods_section` → 失败用 `_extract_methods_by_density` → 失败发全文）→ SYSTEM_PROMPT + COMBINED_PROMPT + PDF 文本 → DeepSeek API 一次调用 → JSON 解析
 
+文献验证：标题优先 — 先比对 `paperTitle`，一致即输出「文献提交正确」；不一致时再用 DOI/PDB/UniProt 兜底。补充材料 PDF 不参与验证。
+
 Token 典型消耗：输入 ~6,500，输出 ~3,000。单篇 ~$0.0018。
 
 ## 配体分类（ligand-classification.ts）
