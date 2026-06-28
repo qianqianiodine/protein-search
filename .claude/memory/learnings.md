@@ -1,6 +1,10 @@
 # Learnings — 被纠正过的坑（只追加，最新在上）
 
 >
+## 2026-06-28 xlsx (SheetJS) 社区版不支持写入富文本
+- 坑：用 `cell.r` 属性设置富文本 XML（加粗+颜色），但导出的 xlsx 文件中格式全部丢失
+- 纠正：xlsx 的 `write_zip_xlsx` 在构建 SST（共享字符串表）时只取 `cell.v`，完全忽略 `cell.r`。需要用 JSZip 后处理：xlsx 写出后解压 ZIP → 替换 `xl/sharedStrings.xml` 中的纯文本 `<si>` 为富文本版 → 重新打包下载
+- 为什么：白花了半小时排查为啥 `r` 属性不生效，最后读 xlsx 源码才发现写入路径根本不处理它
 ## 2026-06-28 记忆文件修改后忘记 git commit
 - 坑：改完 `learnings.md` / `memory.md` 后认为任务完成，忘了 `git commit`，需要用户提醒
 - 纠正：记忆文件的修改也是「功能切片」——改完立刻提交，不等提醒
