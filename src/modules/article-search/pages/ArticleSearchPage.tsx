@@ -185,7 +185,10 @@ export function ArticleSearchPage() {
       {/* 上传 + 提取 */}
       {!extraction && (
         <div style={card}>
-          <h2 style={{ fontSize: 'var(--text-base)', fontWeight: 600, marginBottom: 'var(--space-lg)' }}>上传文献</h2>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-lg)' }}>
+            <h2 style={{ fontSize: 'var(--text-base)', fontWeight: 600 }}>上传文献</h2>
+            <button onClick={handleBack} style={btnSecondary}>← 返回搜索结果</button>
+          </div>
           <PdfUploader onUpload={handleUpload} disabled={phase === 'extracting'} />
           {phase === 'extracting' && (
             <div style={{ textAlign: 'center', padding: 'var(--space-xl)', color: 'var(--color-text-secondary)' }}>

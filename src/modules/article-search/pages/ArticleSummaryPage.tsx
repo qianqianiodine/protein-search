@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useMemo, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import * as XLSX from 'xlsx';
 import JSZip from 'jszip';
 import { loadSummary, removeFromSummary } from '../services/summaryStorage';
@@ -15,12 +15,23 @@ const COLUMNS: Array<{ key: keyof ArticleExtraction; label: string }> = [
 
 export function ArticleSummaryPage() {
   const navigate = useNavigate();
-  const [entries, setEntries] = useState<SummaryEntry[]>(loadSummary);
+  const [searchParams] = useSearchParams();
+  const filterUniprot = searchParams.get('uniprot') || '';
+  const filterGene = searchParams.get('gene') || '';
+
+  const allEntries = loadSummary();
+  const entries = useMemo(() => {
+    if (!filterUniprot) return allEntries;
+    return allEntries.filter((e) => e.uniprot === filterUniprot);
+  }, [allEntries, filterUniprot]);
+
+  const setEntriesRefresh = useState(0)[1];
+  const refresh = () => setEntriesRefresh((n) => n + 1);
   const [expandedCells, setExpandedCells] = useState<Set<string>>(new Set());
 
   const handleRemove = (id: string) => {
     removeFromSummary(id);
-    setEntries(loadSummary());
+    refresh();
   };
 
   const toggleCell = (id: string) => {
@@ -187,7 +198,9 @@ export function ArticleSummaryPage() {
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-xl)' }}>
         <div>
           <h1 style={{ fontSize: 'var(--text-xl)', fontWeight: 700, color: 'var(--color-text)' }}>汇总对比</h1>
-          <p style={{ color: 'var(--color-text-secondary)', fontSize: 'var(--text-sm)', marginTop: 4 }}>{entries.length} 篇文献</p>
+          <p style={{ color: 'var(--color-text-secondary)', fontSize: 'var(--text-sm)', marginTop: 4 }}>
+            {filterGene ? `${filterGene} · ` : ''}{entries.length} 篇文献
+          </p>
         </div>
         <div style={{ display: 'flex', gap: 'var(--space-md)' }}>
           <button style={btnSecondary} onClick={handleExportExcel}>📥 导出 Excel</button>

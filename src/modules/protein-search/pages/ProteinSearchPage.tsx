@@ -229,7 +229,16 @@ export function ProteinSearchPage() {
           </p>
         </div>
         <div style={{ display: 'flex', gap: 'var(--space-sm)' }}>
-          <button style={histBtn} onClick={() => navigate('/article-summary')}>
+          <button
+            style={histBtn}
+            onClick={() => {
+              if (selectedProtein) {
+                navigate(`/article-summary?uniprot=${encodeURIComponent(selectedProtein.accession)}&gene=${encodeURIComponent(selectedProtein.gene)}`);
+              } else {
+                navigate('/article-summary');
+              }
+            }}
+          >
             📊 汇总对比
           </button>
           <button style={histBtn} onClick={() => { setHistory(loadHistory()); setHistoryOpen(true); }}>
