@@ -241,7 +241,7 @@ export function ArticleSummaryPage() {
           const style = isActive ? activeProteinCard : inactiveProteinCard;
           return (
             <button key={p.uniprot} style={style} onClick={() => setSelectedUniprot(p.uniprot)}>
-              {p.gene || p.uniprot} · {p.count} 篇
+              {p.gene || p.proteinName?.split(' ').slice(0, 2).join(' ') || p.uniprot} · {p.count} 篇
             </button>
           );
         })}
