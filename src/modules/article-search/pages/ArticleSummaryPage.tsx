@@ -191,12 +191,20 @@ export function ArticleSummaryPage() {
       <div style={page}>
         <h1 style={{ fontSize: 'var(--text-xl)', fontWeight: 700, marginBottom: 'var(--space-lg)' }}>汇总对比</h1>
         <p style={{ color: 'var(--color-text-secondary)', marginBottom: 'var(--space-xl)' }}>还没有加入任何文献</p>
-        <button
-          style={{ padding: 'var(--space-md) var(--space-xl)', fontSize: 'var(--text-base)', fontWeight: 500, color: '#fff', background: 'var(--color-primary)', border: 'none', borderRadius: 'var(--radius-md)', cursor: 'pointer' }}
-          onClick={() => navigate('/')}
-        >
-          回搜索页
-        </button>
+        <div style={{ display: 'flex', gap: 'var(--space-md)', justifyContent: 'center' }}>
+          <button
+            style={{ padding: 'var(--space-md) var(--space-xl)', fontSize: 'var(--text-base)', fontWeight: 500, color: '#fff', background: 'var(--color-primary)', border: 'none', borderRadius: 'var(--radius-md)', cursor: 'pointer' }}
+            onClick={() => navigate('/article-search')}
+          >
+            ➕ 提交文献
+          </button>
+          <button
+            style={{ padding: 'var(--space-md) var(--space-xl)', fontSize: 'var(--text-base)', fontWeight: 500, color: 'var(--color-text)', background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', cursor: 'pointer' }}
+            onClick={() => navigate('/')}
+          >
+            回搜索页
+          </button>
+        </div>
       </div>
     );
   }
@@ -241,6 +249,19 @@ export function ArticleSummaryPage() {
         </div>
         <div style={{ display: 'flex', gap: 'var(--space-md)' }}>
           <button style={btnSecondary} onClick={handleExportExcel}>📥 导出 Excel</button>
+          <button
+            style={btnSecondary}
+            onClick={() => {
+              const p = selectedProtein;
+              const params = new URLSearchParams();
+              if (p?.uniprot) params.set('uniprot', p.uniprot);
+              if (p?.proteinName) params.set('proteinName', p.proteinName);
+              if (p?.gene) params.set('gene', p.gene);
+              navigate(`/article-search?${params.toString()}`);
+            }}
+          >
+            ➕ 提交文献
+          </button>
           <button style={btnSecondary} onClick={() => navigate('/')}>回搜索页</button>
         </div>
       </header>
@@ -326,7 +347,20 @@ export function ArticleSummaryPage() {
       ) : (
         <div style={{ textAlign: 'center', padding: 'var(--space-3xl)', color: 'var(--color-text-secondary)' }}>
           <p style={{ fontSize: 'var(--text-lg)', marginBottom: 'var(--space-md)' }}>当前未分析文献</p>
-          <p style={{ fontSize: 'var(--text-sm)' }}>在蛋白搜索结果中点击「分析」，提取完成后加入汇总即可在此查看</p>
+          <p style={{ fontSize: 'var(--text-sm)', marginBottom: 'var(--space-lg)' }}>在蛋白搜索结果中点击「分析」，或直接提交文献 PDF</p>
+          <button
+            style={btnSecondary}
+            onClick={() => {
+              const p = selectedProtein;
+              const params = new URLSearchParams();
+              if (p?.uniprot) params.set('uniprot', p.uniprot);
+              if (p?.proteinName) params.set('proteinName', p.proteinName);
+              if (p?.gene) params.set('gene', p.gene);
+              navigate(`/article-search?${params.toString()}`);
+            }}
+          >
+            ➕ 提交文献
+          </button>
         </div>
       )}
     </div>
