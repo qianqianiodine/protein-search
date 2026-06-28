@@ -13,6 +13,7 @@
 ## 开发流程
 - 代码修改后自动重启 Vite dev server（杀旧进程 + 重启，固定端口优先 5173）
 - 编译验证 + dev server 确认后再提交
+- **每次修改完、杀完进程后，必须给出可访问的 URL**（前端 http://localhost:5173，后端 http://127.0.0.1:8765）
 
 ## 记忆维护
 - 每个 substantive 任务收尾前回写 memory
