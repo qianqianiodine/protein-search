@@ -1,12 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { taskController } from '../services/articleSearchTaskController';
-import { extractPdf } from '../services/extractionService';
+import { analysisTaskManager } from '../services/analysisTaskManager';
 import { clearPendingPdfs } from '../services/pdfFileCache';
 import { addToSummary, isInSummary } from '../services/summaryStorage';
 import {
   loadArticleExtraction,
-  saveArticleExtraction,
 } from '../services/articleHistoryService';
 import { PdfUploader } from '../components/PdfUploader';
 import { ExtractionResult } from '../components/ExtractionResult';
@@ -36,51 +34,66 @@ export function ArticleSearchPage() {
   const [extractedFromCache, setExtractedFromCache] = useState(!!cached);
   const [error, setError] = useState<string | null>(null);
   const [added, setAdded] = useState(() => isInSummary(doi, uniprot));
-  const abortRef = useRef<AbortController | null>(null);
+  const activeTaskIdRef = useRef<string | null>(null);
 
-  // 提取完成后自动存入历史
+  // 监听 taskManager：当前任务完成时更新 UI
   useEffect(() => {
-    if (phase === 'done' && extraction && doi && uniprot && !extractedFromCache) {
-      saveArticleExtraction({
-        id: `${doi}-${uniprot}-${Date.now()}`,
-        doi,
-        pdbId: pdb,
-        uniprot,
-        proteinName,
-        gene,
-        title: paperTitle || doi || pdb || uniprot,
-        extraction,
-        timestamp: Date.now(),
-      });
-      setExtractedFromCache(false);
+    const unsubscribe = analysisTaskManager.subscribe(() => {
+      const taskId = activeTaskIdRef.current;
+      if (!taskId) return;
+      const task = analysisTaskManager.getTask(taskId);
+      if (!task) {
+        // 任务已消除（被 dismiss），忽略
+        return;
+      }
+      if (task.status === 'completed' && task.extraction) {
+        setExtraction(task.extraction);
+        setPhase('done');
+        setAdded(isInSummary(doi, uniprot));
+        clearPendingPdfs();
+        setExtractedFromCache(false);
+        activeTaskIdRef.current = null;
+      } else if (task.status === 'failed') {
+        setError(task.error || '提取失败');
+        setPhase('idle');
+        activeTaskIdRef.current = null;
+      }
+    });
+    return unsubscribe;
+  }, [doi, uniprot]);
+
+  // 页面加载时检查 taskManager 中是否有 running/completed 任务
+  useEffect(() => {
+    if (!doi || !uniprot) return;
+    const existingTask = analysisTaskManager.getTaskByMetadata(doi, uniprot);
+    if (!existingTask) return;
+    if (existingTask.status === 'running') {
+      setPhase('extracting');
+      activeTaskIdRef.current = existingTask.id;
+    } else if (existingTask.status === 'completed' && existingTask.extraction) {
+      setPhase('done');
+      setExtraction(existingTask.extraction);
+      setAdded(isInSummary(doi, uniprot));
+    } else if (existingTask.status === 'failed') {
+      setError(existingTask.error || '提取失败');
+      setPhase('idle');
     }
-  }, [phase, extraction, doi, pdb, uniprot, extractedFromCache]);
+  }, [doi, uniprot]);
 
   const handleUpload = useCallback(
-    async (mainPdf: File, suppPdf?: File | null) => {
-      abortRef.current?.abort();
-      const controller = taskController.register();
-      abortRef.current = controller;
-
+    (mainPdf: File, suppPdf?: File | null) => {
       setPhase('extracting');
       setError(null);
       setExtractedFromCache(false);
-      try {
-        const result = await extractPdf(mainPdf, suppPdf, controller.signal, { doi, pdb, uniprot });
-        if (controller.signal.aborted) return;
-        setExtraction(result);
-        setPhase('done');
-        setAdded(isInSummary(doi, uniprot));
-        clearPendingPdfs(); // 提取成功后删除缓存的 PDF
-      } catch (err) {
-        if (controller.signal.aborted) return;
-        setError(err instanceof Error ? err.message : '提取失败');
-        setPhase('idle');
-      } finally {
-        taskController.remove(controller);
-      }
+
+      const taskId = analysisTaskManager.startTask(
+        { doi, pdb, uniprot, proteinName, gene, paperTitle },
+        mainPdf,
+        suppPdf,
+      );
+      activeTaskIdRef.current = taskId;
     },
-    [doi, uniprot],
+    [doi, pdb, uniprot, proteinName, gene, paperTitle],
   );
 
   const handleAddToSummary = () => {
@@ -100,7 +113,6 @@ export function ArticleSearchPage() {
   };
 
   const handleBack = () => {
-    taskController.cancelAll();
     navigate('/');
   };
 
@@ -177,7 +189,23 @@ export function ArticleSearchPage() {
           <PdfUploader onUpload={handleUpload} disabled={phase === 'extracting'} />
           {phase === 'extracting' && (
             <div style={{ textAlign: 'center', padding: 'var(--space-xl)', color: 'var(--color-text-secondary)' }}>
-              ⏳ 正在解析 PDF 并提取信息（可能需要 1-2 分钟）...
+              <div>⏳ 正在解析 PDF 并提取信息（可能需要 1-2 分钟）...</div>
+              <button
+                onClick={handleBack}
+                style={{
+                  marginTop: 'var(--space-lg)',
+                  padding: 'var(--space-sm) var(--space-lg)',
+                  fontSize: 'var(--text-sm)',
+                  fontWeight: 500,
+                  color: 'var(--color-text)',
+                  background: 'var(--color-surface)',
+                  border: '1px solid var(--color-border)',
+                  borderRadius: 'var(--radius-md)',
+                  cursor: 'pointer',
+                }}
+              >
+                ← 返回搜索结果（分析将在后台继续）
+              </button>
             </div>
           )}
           {error && <div style={errBox}>{error}</div>}

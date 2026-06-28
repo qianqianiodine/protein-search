@@ -82,3 +82,11 @@ export function stripMarkdown(md: string): string {
     .replace(/\n{3,}/g, '\n\n')
     .trim();
 }
+
+/** 从 Markdown 提取前 N 个词的预览文本 */
+export function previewText(md: string, maxWords = 12): string {
+  const plain = stripMarkdown(md);
+  const words = plain.split(/\s+/).filter(Boolean);
+  if (words.length <= maxWords) return plain;
+  return words.slice(0, maxWords).join(' ') + '...';
+}
