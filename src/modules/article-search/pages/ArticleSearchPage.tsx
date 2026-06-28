@@ -182,7 +182,9 @@ export function ArticleSearchPage() {
   const card: React.CSSProperties = { background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-lg)', padding: 'var(--space-xl)', marginBottom: 'var(--space-xl)' };
   const btnPrimary: React.CSSProperties = { padding: 'var(--space-md) var(--space-xl)', fontSize: 'var(--text-base)', fontWeight: 500, color: '#fff', background: 'var(--color-primary)', border: 'none', borderRadius: 'var(--radius-md)', cursor: 'pointer' };
   const btnSecondary: React.CSSProperties = { ...btnPrimary, background: 'var(--color-surface)', color: 'var(--color-text)', border: '1px solid var(--color-border)' };
-  const btnSm: React.CSSProperties = { padding: 'var(--space-xs) var(--space-md)', fontSize: 'var(--text-xs)', fontWeight: 500, color: 'var(--color-text-secondary)', background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', cursor: 'pointer' };
+  const btnSm: React.CSSProperties = { padding: 'var(--space-sm) var(--space-lg)', fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--color-text)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', cursor: 'pointer' };
+  const btnSmBlue: React.CSSProperties = { ...btnSm, background: '#E3F0FA', border: '1px solid #B8D4F0' };
+  const btnSmPink: React.CSSProperties = { ...btnSm, background: '#FDE8EC', border: '1px solid #F0C0C8' };
   const btnSuccess: React.CSSProperties = { ...btnPrimary, background: '#7D9DB5' };
   const errBox: React.CSSProperties = { marginTop: 'var(--space-md)', padding: 'var(--space-md)', color: 'var(--color-danger)', background: 'var(--color-danger-bg)', borderRadius: 'var(--radius-md)', fontSize: 'var(--text-sm)' };
   const paramRow: React.CSSProperties = { display: 'flex', gap: 'var(--space-xl)', flexWrap: 'wrap', marginBottom: 'var(--space-md)' };
@@ -267,8 +269,8 @@ export function ArticleSearchPage() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-lg)' }}>
             <h2 style={{ fontSize: 'var(--text-base)', fontWeight: 600 }}>上传文献</h2>
             <div style={{ display: 'flex', gap: 'var(--space-sm)' }}>
-              <button onClick={handleBack} style={btnSm}>← 返回搜索</button>
-              <button onClick={() => navigate(`/article-summary?uniprot=${encodeURIComponent(uniprot)}&gene=${encodeURIComponent(gene)}`)} style={btnSm}>← 返回汇总</button>
+              <button onClick={handleBack} style={btnSmBlue}>← 返回搜索</button>
+              <button onClick={() => navigate(`/article-summary?uniprot=${encodeURIComponent(uniprot)}&gene=${encodeURIComponent(gene)}`)} style={btnSmPink}>← 返回汇总</button>
             </div>
           </div>
           <PdfUploader onUpload={handleUpload} disabled={phase === 'extracting'} />
@@ -302,6 +304,7 @@ export function ArticleSearchPage() {
           <ExtractionResult extraction={extraction} />
           <div style={{ display: 'flex', gap: 'var(--space-md)', marginTop: 'var(--space-xl)', marginBottom: 'var(--space-2xl)' }}>
             <button onClick={handleReset} style={btnSecondary}>🔄 重新上传</button>
+            <button onClick={handleBack} style={btnSmBlue}>← 返回搜索</button>
             {added ? (
               <button onClick={handleToggleSummary} style={btnSuccess}>✓ 已加入汇总（点击取消）</button>
             ) : (
