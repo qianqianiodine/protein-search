@@ -1,6 +1,16 @@
 # Learnings — 被纠正过的坑（只追加，最新在上）
 
 >
+## 2026-06-28 React Router 同路由切换时 useState 不重置
+- 坑：从通知卡片 `navigate('/article-search?doi=B')` 跳转时，如果当前已在 `/article-search?doi=A`，React Router 不会卸载重挂载组件，`useState` 初始值（依赖首次渲染时的 `searchParams`）不会重新计算，导致页面显示旧文献的状态
+- 纠正：加 `useEffect([doi, uniprot])` 监听 URL 参数变化，手动重置 `phase`/`extraction`/`error` 等全部相关 state，并查 localStorage + taskManager 恢复当前文献的正确数据
+- 为什么：这是 React Router v6 的基本行为，但容易忽略——只要 route path 没变，组件实例就保留
+
+## 2026-06-28 IndexedDB 存文件在 SPA 导航时残留
+- 坑：`PdfUploader` 用 IndexedDB 固定 key（`'main-pdf'`、`'supp-pdf'`）存上传的 PDF 文件，导航到新文献时组件重新挂载，`useEffect` 从 IndexedDB 恢复出旧文献的文件，用户看到上一篇文章的 PDF 还挂在上面
+- 纠正：组件卸载时 + URL 参数变化时调用 `clearPendingPdfs()` 清除缓存；页面刷新场景下 IndexedDB 缓存本来就没意义（taskManager 是内存单例，刷新即丢失）
+- 为什么：IndexedDB 跨 session 持久化 + SPA 内导航不刷新页面 = 旧数据残留的典型场景
+
 ## 2026-06-28 xlsx (SheetJS) 社区版不支持写入富文本
 - 坑：用 `cell.r` 属性设置富文本 XML（加粗+颜色），但导出的 xlsx 文件中格式全部丢失
 - 纠正：xlsx 的 `write_zip_xlsx` 在构建 SST（共享字符串表）时只取 `cell.v`，完全忽略 `cell.r`。需要用 JSZip 后处理：xlsx 写出后解压 ZIP → 替换 `xl/sharedStrings.xml` 中的纯文本 `<si>` 为富文本版 → 重新打包下载
