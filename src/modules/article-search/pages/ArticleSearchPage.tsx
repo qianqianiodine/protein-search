@@ -243,7 +243,7 @@ export function ArticleSearchPage() {
               <button onClick={handleAddToSummary} style={btnSecondary}>📊 加入汇总</button>
             )}
             {added && (
-              <button onClick={() => navigate('/article-summary')} style={btnPrimary}>查看汇总对比</button>
+              <button onClick={() => navigate(`/article-summary?uniprot=${encodeURIComponent(uniprot)}&gene=${encodeURIComponent(gene)}`)} style={btnPrimary}>查看汇总对比</button>
             )}
           </div>
         </>
