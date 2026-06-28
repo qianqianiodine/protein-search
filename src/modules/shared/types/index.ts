@@ -256,7 +256,8 @@ export interface SummaryEntry {
   doi: string;
   pdbId: string;
   uniprot: string;
-  proteinName: string;       // 蛋白名称（来自 UniProt 搜索结果）
+  proteinName: string;       // 蛋白全名（来自 UniProt 搜索结果）
+  gene: string;              // 基因名/蛋白缩写，如 "IDO1"
   title: string;             // 论文标题
   extraction: ArticleExtraction;
   addedAt: number;

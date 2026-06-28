@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import * as XLSX from 'xlsx';
+import JSZip from 'jszip';
 import { loadSummary, removeFromSummary } from '../services/summaryStorage';
 import { renderMarkdown, stripMarkdown } from '../../shared/utils/markdown';
 import type { ArticleExtraction, SummaryEntry } from '../../shared/types';
@@ -53,8 +54,8 @@ export function ArticleSummaryPage() {
     crystallization: '6A4A8A',
   };
 
-  /** 将 Markdown 转为 xlsx 富文本 XML（<si>...</si>） */
-  const markdownToRichXml = (md: string, section: string): string => {
+  /** 将 Markdown 转为 xlsx 富文本 XML 片段（仅 <r> 元素，无 <si> 包装） */
+  const markdownToRichRuns = (md: string, section: string): string => {
     const color = EXCEL_FONT_COLORS[section] || '4A6A8A';
     const segments = md.split(/(\*\*.*?\*\*)/g);
     const runs: string[] = [];
@@ -69,47 +70,93 @@ export function ArticleSummaryPage() {
           runs.push(`<r><rPr><b/></rPr><t>${txt}</t></r>`);
         }
       } else {
-        runs.push(`<r><t>${escapeXml(seg)}</t></r>`);
+        runs.push(`<r><t xml:space="preserve">${escapeXml(seg)}</t></r>`);
       }
     }
-    return `<si>${runs.join('')}</si>`;
+    return runs.join('');
   };
 
   /** XML 特殊字符转义 */
   const escapeXml = (s: string): string =>
     s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
-  /** 导出 Excel（富文本：加粗 + 板块色字体） */
-  const handleExportExcel = () => {
-    const proteinName = entries[0]?.proteinName || entries[0]?.uniprot || entries[0]?.pdbId || '未知蛋白';
+  /** 导出 Excel（富文本：加粗 + 板块色字体，通过 JSZip 后处理 SST XML） */
+  const handleExportExcel = async () => {
+    const gene = entries[0]?.gene || entries[0]?.proteinName || entries[0]?.uniprot || entries[0]?.pdbId || '未知蛋白';
     const date = new Date().toISOString().slice(0, 10);
-    const filename = `${proteinName}_纯化表达文献汇总_${date}.xlsx`;
+    const filename = `${gene}_纯化表达文献汇总_${date}.xlsx`;
 
-    // 表头
+    // 第一步：构建纯文本工作表
     const header = ['文献', 'PDB', '蛋白构建', '表达', '纯化', '结晶'];
-
-    // 构建数据行，版块列用富文本 cell 对象
-    const rows: Array<Array<string | { t: string; v: string; r: string }>> = [header];
+    const rows: string[][] = [header];
     for (const e of entries) {
       rows.push([
         e.doi || e.title || e.pdbId || e.uniprot,
         e.pdbId,
-        { t: 's', v: stripMarkdown(e.extraction.construct), r: markdownToRichXml(e.extraction.construct, 'construct') },
-        { t: 's', v: stripMarkdown(e.extraction.expression), r: markdownToRichXml(e.extraction.expression, 'expression') },
-        { t: 's', v: stripMarkdown(e.extraction.purification), r: markdownToRichXml(e.extraction.purification, 'purification') },
-        { t: 's', v: stripMarkdown(e.extraction.crystallization), r: markdownToRichXml(e.extraction.crystallization, 'crystallization') },
+        stripMarkdown(e.extraction.construct),
+        stripMarkdown(e.extraction.expression),
+        stripMarkdown(e.extraction.purification),
+        stripMarkdown(e.extraction.crystallization),
       ]);
     }
 
     const ws = XLSX.utils.aoa_to_sheet(rows);
-
     ws['!cols'] = [
       { wch: 30 }, { wch: 12 }, { wch: 50 }, { wch: 50 }, { wch: 50 }, { wch: 50 },
     ];
 
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, '汇总对比');
-    XLSX.writeFile(wb, filename);
+
+    // 第二步：用 bookSST: true 写入数组缓冲区
+    const wbout = XLSX.write(wb, { type: 'array', bookSST: true });
+
+    // 第三步：构建 plainText → richRuns 映射
+    const richTextMap = new Map<string, string>();
+    for (const e of entries) {
+      for (const col of COLUMNS) {
+        const plainText = stripMarkdown(e.extraction[col.key]);
+        if (!richTextMap.has(plainText)) {
+          richTextMap.set(plainText, markdownToRichRuns(e.extraction[col.key], col.key));
+        }
+      }
+    }
+
+    // 第四步：用 JSZip 后处理共享字符串 XML
+    const zip = await JSZip.loadAsync(wbout);
+    const sstFile = zip.file('xl/sharedStrings.xml');
+    if (sstFile) {
+      let sstXml = await sstFile.async('string');
+
+      for (const [plainText, richRuns] of richTextMap) {
+        const escaped = plainText
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;');
+        const escapedForRegex = escaped.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+        // 替换 <si><t ...>escaped</t></si> 为 <si>richRuns</si>
+        const regex = new RegExp(
+          `<si><t(?: xml:space="preserve")?>${escapedForRegex}</t></si>`,
+          'g'
+        );
+        sstXml = sstXml.replace(regex, `<si>${richRuns}</si>`);
+      }
+
+      zip.file('xl/sharedStrings.xml', sstXml);
+    }
+
+    // 第五步：生成 Blob 并触发下载
+    const blob = await zip.generateAsync({ type: 'blob' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
 
   if (entries.length === 0) {
@@ -164,8 +211,12 @@ export function ArticleSummaryPage() {
             {entries.map((entry) => (
               <tr key={entry.id}>
                 <td style={tdStyle}>
-                  <div style={{ fontWeight: 600, fontSize: 'var(--text-xs)' }}>{entry.pdbId || entry.uniprot}</div>
-                  <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-secondary)', wordBreak: 'break-all', marginTop: 4 }}>{entry.doi}</div>
+                  {(entry.title && entry.title !== entry.doi && entry.title !== entry.pdbId && entry.title !== entry.uniprot) ? (
+                    <div style={{ fontWeight: 600, fontSize: 'var(--text-xs)', marginBottom: 4 }}>{entry.title}</div>
+                  ) : (
+                    <div style={{ fontWeight: 600, fontSize: 'var(--text-xs)', marginBottom: 4 }}>{entry.pdbId || entry.uniprot}</div>
+                  )}
+                  <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-secondary)', wordBreak: 'break-all' }}>{entry.doi}</div>
                 </td>
                 <td style={{ ...tdStyle, fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)' }}>{entry.pdbId}</td>
                 {COLUMNS.map((col) => {

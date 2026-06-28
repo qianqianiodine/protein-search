@@ -9,6 +9,7 @@ export interface ArticleHistoryEntry {
   pdbId: string;
   uniprot: string;
   proteinName: string;
+  gene: string;
   title: string;
   extraction: ArticleExtraction;
   timestamp: number;

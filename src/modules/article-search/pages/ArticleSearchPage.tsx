@@ -24,6 +24,7 @@ export function ArticleSearchPage() {
   const pdbIds = pdbRaw ? pdbRaw.split(',').filter(Boolean) : [];
   const uniprot = searchParams.get('uniprot') || '';
   const proteinName = searchParams.get('proteinName') || '';
+  const gene = searchParams.get('gene') || '';
   const paperTitle = searchParams.get('title') || '';
 
   // 页面加载时检查缓存
@@ -46,7 +47,8 @@ export function ArticleSearchPage() {
         pdbId: pdb,
         uniprot,
         proteinName,
-        title: doi || pdb || uniprot,
+        gene,
+        title: paperTitle || doi || pdb || uniprot,
         extraction,
         timestamp: Date.now(),
       });
@@ -89,7 +91,8 @@ export function ArticleSearchPage() {
       pdbId: pdb,
       uniprot,
       proteinName,
-      title: doi || pdb || uniprot,
+      gene,
+      title: paperTitle || doi || pdb || uniprot,
       extraction,
       addedAt: Date.now(),
     });
