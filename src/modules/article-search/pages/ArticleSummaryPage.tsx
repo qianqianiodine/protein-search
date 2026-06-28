@@ -199,22 +199,24 @@ export function ArticleSummaryPage() {
   const btnSecondary: React.CSSProperties = { padding: 'var(--space-sm) var(--space-lg)', fontSize: 'var(--text-sm)', fontWeight: 500, color: 'var(--color-text)', background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', cursor: 'pointer' };
 
   const activeProteinCard: React.CSSProperties = {
-    padding: 'var(--space-md) var(--space-lg)',
+    padding: 'var(--space-sm) var(--space-lg)',
     background: 'var(--color-primary)',
     color: '#fff',
-    borderRadius: 'var(--radius-md)',
+    borderRadius: 'var(--radius-full)',
     cursor: 'pointer',
     border: 'none',
-    textAlign: 'left',
-    minWidth: 180,
+    whiteSpace: 'nowrap',
     flexShrink: 0,
+    fontSize: 'var(--text-sm)',
+    fontWeight: 600,
   };
 
   const inactiveProteinCard: React.CSSProperties = {
     ...activeProteinCard,
     background: 'var(--color-surface)',
-    color: 'var(--color-text)',
+    color: 'var(--color-text-secondary)',
     border: '1px solid var(--color-border)',
+    fontWeight: 500,
   };
 
   return (
@@ -239,12 +241,7 @@ export function ArticleSummaryPage() {
           const style = isActive ? activeProteinCard : inactiveProteinCard;
           return (
             <button key={p.uniprot} style={style} onClick={() => setSelectedUniprot(p.uniprot)}>
-              <div style={{ fontWeight: 600, fontSize: 'var(--text-sm)' }}>{p.gene || p.uniprot}</div>
-              <div style={{ fontSize: 'var(--text-xs)', opacity: 0.8, marginTop: 2 }}>{p.proteinName}</div>
-              <div style={{ fontSize: 'var(--text-xs)', fontFamily: 'var(--font-mono)', opacity: 0.7, marginTop: 2 }}>{p.uniprot}</div>
-              <div style={{ fontSize: 'var(--text-xs)', fontWeight: 600, marginTop: 6, opacity: isActive ? 1 : 0.6 }}>
-                {p.count} 篇文献
-              </div>
+              {p.gene || p.uniprot} · {p.count} 篇
             </button>
           );
         })}
