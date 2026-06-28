@@ -10,10 +10,10 @@ const HIGHLIGHT_CLASSES: Record<string, string> = {
 
 /** 注入页面的颜色 CSS */
 const HIGHLIGHT_CSS = `
-.hl-construct { background: #D8E2F0; padding: 1px 3px; border-radius: 2px; }
-.hl-expression { background: #D8ECD8; padding: 1px 3px; border-radius: 2px; }
-.hl-purification { background: #F0E4D8; padding: 1px 3px; border-radius: 2px; }
-.hl-crystallization { background: #E4DAF0; padding: 1px 3px; border-radius: 2px; }
+.hl-construct { background: #E6ECF5; padding: 1px 3px; border-radius: 6px; }
+.hl-expression { background: #E6F4E6; padding: 1px 3px; border-radius: 6px; }
+.hl-purification { background: #F6EFE8; padding: 1px 3px; border-radius: 6px; }
+.hl-crystallization { background: #EFEAF5; padding: 1px 3px; border-radius: 6px; }
 `;
 
 /** 正则兜底模式 — 匹配标准实验数值并用 ** 包裹 */
