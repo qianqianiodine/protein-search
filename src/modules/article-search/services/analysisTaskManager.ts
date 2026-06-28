@@ -134,6 +134,7 @@ class AnalysisTaskManager {
           doi: task.metadata.doi,
           pdb: task.metadata.pdb,
           uniprot: task.metadata.uniprot,
+          paperTitle: task.metadata.paperTitle,
         },
       );
 
