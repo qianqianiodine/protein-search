@@ -185,6 +185,10 @@ export function ArticleSearchPage() {
   const btnPrimary: React.CSSProperties = { ...btnBase, color: '#fff', background: 'var(--color-primary)' };
   const btnSecondary: React.CSSProperties = { ...btnBase, background: 'var(--color-surface)', color: 'var(--color-text)', border: '2px solid var(--color-border)' };
   const btnSuccess: React.CSSProperties = { ...btnBase, background: '#7D9DB5', color: '#fff' };
+  // 头部导航按钮（小号）
+  const btnSm: React.CSSProperties = { padding: 'calc(var(--space-sm) * 0.7) calc(var(--space-lg) * 0.8)', fontSize: 'var(--text-sm)', fontWeight: 600, borderRadius: 6, cursor: 'pointer', border: '2px solid', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.3em', lineHeight: 1.2 };
+  const btnBlue: React.CSSProperties = { ...btnSm, background: '#E3F0FA', borderColor: '#9BC3E0', color: 'var(--color-text)' };
+  const btnPink: React.CSSProperties = { ...btnSm, background: '#FDE8EC', borderColor: '#E8B4BC', color: 'var(--color-text)' };
   // 图标徽章 span — 纯 flex 居中（字符自带灰底灰框外观）
   const iconSpan: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2em', lineHeight: 1, flexShrink: 0 };
   // emoji 专用 span — 纯居中，无徽章（🔄）
@@ -263,6 +267,14 @@ export function ArticleSearchPage() {
           {!gene && !uniprot && (
             <span style={{ color: 'var(--color-text-secondary)', fontSize: 'var(--text-sm)' }}>未关联蛋白</span>
           )}
+        </div>
+      )}
+
+      {/* 导航条 —— 未提交文献时显示 */}
+      {!extraction && (
+        <div style={{ display: 'flex', gap: 'var(--space-sm)', marginBottom: 'var(--space-lg)' }}>
+          <button onClick={handleBack} style={btnBlue}><span style={iconSpan}>◀️</span> 返回搜索</button>
+          <button onClick={() => navigate(`/article-summary?uniprot=${encodeURIComponent(uniprot)}&gene=${encodeURIComponent(gene)}`)} style={btnPink}><span style={iconSpan}>◀️</span> 返回汇总</button>
         </div>
       )}
 
