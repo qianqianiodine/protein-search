@@ -27,11 +27,11 @@ export function ArticleSearchPage() {
   const paperTitle = searchParams.get('title') || '';
   const extractionId = searchParams.get('extractionId') || '';
 
-  // 页面加载时检查缓存（优先按 ID 查找，无 DOI 时用 extractionId）
-  const cached = (doi && uniprot)
-    ? loadArticleExtraction(doi, uniprot)
-    : extractionId
-      ? loadArticleExtractionById(extractionId)
+  // 页面加载时检查缓存：优先 extractionId，其次 uniprot（doi 可为空），否则 null
+  const cached = extractionId
+    ? loadArticleExtractionById(extractionId)
+    : uniprot
+      ? loadArticleExtraction(doi, uniprot)
       : null;
   const [phase, setPhase] = useState<Phase>(cached ? 'done' : 'idle');
   const [extraction, setExtraction] = useState<ArticleExtraction | null>(
@@ -44,11 +44,11 @@ export function ArticleSearchPage() {
 
   // Bug③修复：当 doi/uniprot 变化时（如同页面从通知跳转到不同文献），重置所有状态
   useEffect(() => {
-    // 先按 ID 查找（无 DOI 时用），再按 doi+uniprot 查找
-    const newCached = (doi && uniprot)
-      ? loadArticleExtraction(doi, uniprot)
-      : extractionId
-        ? loadArticleExtractionById(extractionId)
+    // 先按 extractionId 查找，再按 uniprot（doi 可为空）查找
+    const newCached = extractionId
+      ? loadArticleExtractionById(extractionId)
+      : uniprot
+        ? loadArticleExtraction(doi, uniprot)
         : null;
     if (newCached) {
       setExtraction(newCached.extraction);
@@ -57,10 +57,10 @@ export function ArticleSearchPage() {
       setAdded(isInSummary(doi, uniprot));
       setError(null);
     } else {
-      const existingTask = doi && uniprot
-        ? analysisTaskManager.getTaskByMetadata(doi, uniprot)
-        : extractionId
-          ? analysisTaskManager.getTask(extractionId)
+      const existingTask = extractionId
+        ? analysisTaskManager.getTask(extractionId)
+        : uniprot
+          ? analysisTaskManager.getTaskByMetadata(doi, uniprot)
           : undefined;
       if (existingTask?.status === 'completed' && existingTask.extraction) {
         setExtraction(existingTask.extraction);
@@ -180,12 +180,19 @@ export function ArticleSearchPage() {
   // styles
   const page: React.CSSProperties = { maxWidth: 1000, margin: '0 auto', padding: 'var(--space-2xl)' };
   const card: React.CSSProperties = { background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-lg)', padding: 'var(--space-xl)', marginBottom: 'var(--space-xl)' };
-  const btnPrimary: React.CSSProperties = { padding: 'var(--space-md) var(--space-xl)', fontSize: 'var(--text-base)', fontWeight: 500, color: '#fff', background: 'var(--color-primary)', border: 'none', borderRadius: 'var(--radius-md)', cursor: 'pointer' };
-  const btnSecondary: React.CSSProperties = { ...btnPrimary, background: 'var(--color-surface)', color: 'var(--color-text)', border: '1px solid var(--color-border)' };
-  const btnSm: React.CSSProperties = { padding: 'var(--space-sm) var(--space-lg)', fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--color-text)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', cursor: 'pointer' };
-  const btnSmBlue: React.CSSProperties = { ...btnSm, background: '#E3F0FA', border: '1px solid #B8D4F0' };
-  const btnSmPink: React.CSSProperties = { ...btnSm, background: '#FDE8EC', border: '1px solid #F0C0C8' };
-  const btnSuccess: React.CSSProperties = { ...btnPrimary, background: '#7D9DB5' };
+  // 结果区按钮（标准大小 — 垂直 padding 缩 30%、水平缩 20%，居中）
+  const btnBase: React.CSSProperties = { padding: 'calc(var(--space-md) * 0.7) calc(var(--space-xl) * 0.8)', fontSize: 'var(--text-base)', fontWeight: 600, borderRadius: 6, cursor: 'pointer', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.3em', lineHeight: 1.2 };
+  const btnPrimary: React.CSSProperties = { ...btnBase, color: '#fff', background: 'var(--color-primary)' };
+  const btnSecondary: React.CSSProperties = { ...btnBase, background: 'var(--color-surface)', color: 'var(--color-text)', border: '2px solid var(--color-border)' };
+  const btnSuccess: React.CSSProperties = { ...btnBase, background: '#7D9DB5', color: '#fff' };
+  // 头部导航按钮（小号 — 垂直 padding 缩 30%、水平缩 20%，居中）
+  const btnSm: React.CSSProperties = { padding: 'calc(var(--space-sm) * 0.7) calc(var(--space-lg) * 0.8)', fontSize: 'var(--text-sm)', fontWeight: 600, borderRadius: 6, cursor: 'pointer', border: '2px solid', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.3em', lineHeight: 1.2 };
+  const btnBlue: React.CSSProperties = { ...btnSm, background: '#E3F0FA', borderColor: '#9BC3E0', color: 'var(--color-text)' };
+  const btnPink: React.CSSProperties = { ...btnSm, background: '#FDE8EC', borderColor: '#E8B4BC', color: 'var(--color-text)' };
+  // 图标徽章 span — 纯 flex 居中（字符自带灰底灰框外观）
+  const iconSpan: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2em', lineHeight: 1, flexShrink: 0 };
+  // emoji 专用 span — 纯居中，无徽章（🔄）
+  const emojiSpan: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2em', lineHeight: 1, flexShrink: 0 };
   const errBox: React.CSSProperties = { marginTop: 'var(--space-md)', padding: 'var(--space-md)', color: 'var(--color-danger)', background: 'var(--color-danger-bg)', borderRadius: 'var(--radius-md)', fontSize: 'var(--text-sm)' };
   const paramRow: React.CSSProperties = { display: 'flex', gap: 'var(--space-xl)', flexWrap: 'wrap', marginBottom: 'var(--space-md)' };
   const proteinInfoCard: React.CSSProperties = { background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-lg)', padding: 'var(--space-lg) var(--space-xl)', marginBottom: 'var(--space-xl)', display: 'flex', alignItems: 'center', gap: 'var(--space-xl)', flexWrap: 'wrap' };
@@ -269,8 +276,8 @@ export function ArticleSearchPage() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-lg)' }}>
             <h2 style={{ fontSize: 'var(--text-base)', fontWeight: 600 }}>上传文献</h2>
             <div style={{ display: 'flex', gap: 'var(--space-sm)' }}>
-              <button onClick={handleBack} style={btnSmBlue}>← 返回搜索</button>
-              <button onClick={() => navigate(`/article-summary?uniprot=${encodeURIComponent(uniprot)}&gene=${encodeURIComponent(gene)}`)} style={btnSmPink}>← 返回汇总</button>
+              <button onClick={handleBack} style={btnBlue}><span style={iconSpan}>◀️</span> 返回搜索</button>
+              <button onClick={() => navigate(`/article-summary?uniprot=${encodeURIComponent(uniprot)}&gene=${encodeURIComponent(gene)}`)} style={btnPink}><span style={iconSpan}>◀️</span> 返回汇总</button>
             </div>
           </div>
           <PdfUploader onUpload={handleUpload} disabled={phase === 'extracting'} />
@@ -303,16 +310,14 @@ export function ArticleSearchPage() {
           )}
           <ExtractionResult extraction={extraction} />
           <div style={{ display: 'flex', gap: 'var(--space-md)', marginTop: 'var(--space-xl)', marginBottom: 'var(--space-2xl)' }}>
-            <button onClick={handleReset} style={btnSecondary}>🔄 重新上传</button>
-            <button onClick={handleBack} style={btnSmBlue}>← 返回搜索</button>
+            <button onClick={handleReset} style={btnSecondary}><span style={emojiSpan}>🔄</span> 重新上传</button>
+            <button onClick={handleBack} style={btnSecondary}><span style={iconSpan}>◀️</span> 返回搜索</button>
             {added ? (
-              <button onClick={handleToggleSummary} style={btnSuccess}>✓ 已加入汇总（点击取消）</button>
+              <button onClick={handleToggleSummary} style={btnSuccess}>已加入汇总（点击取消）</button>
             ) : (
-              <button onClick={handleToggleSummary} style={btnSecondary}>📊 加入汇总</button>
+              <button onClick={handleToggleSummary} style={btnSecondary}><span style={iconSpan}>➕</span> 加入汇总</button>
             )}
-            {added && (
-              <button onClick={() => navigate(`/article-summary?uniprot=${encodeURIComponent(uniprot)}&gene=${encodeURIComponent(gene)}`)} style={btnPrimary}>查看汇总对比</button>
-            )}
+            <button onClick={() => navigate(`/article-summary?uniprot=${encodeURIComponent(uniprot)}&gene=${encodeURIComponent(gene)}`)} style={btnPrimary}>查看汇总对比</button>
           </div>
         </>
       )}

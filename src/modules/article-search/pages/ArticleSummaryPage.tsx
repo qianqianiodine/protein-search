@@ -184,7 +184,17 @@ export function ArticleSummaryPage() {
     URL.revokeObjectURL(url);
   };
 
-  // ---- empty global state ----
+  // ---- navigate to article analysis ----
+  const handleTitleClick = (entry: SummaryEntry) => {
+    const params = new URLSearchParams();
+    if (entry.doi) params.set('doi', entry.doi);
+    if (entry.pdbId) params.set('pdb', entry.pdbId);
+    if (entry.uniprot) params.set('uniprot', entry.uniprot);
+    if (entry.proteinName) params.set('proteinName', entry.proteinName);
+    if (entry.gene) params.set('gene', entry.gene);
+    if (entry.title) params.set('title', entry.title);
+    navigate(`/article-search?${params.toString()}`);
+  };
   if (allEntries.length === 0) {
     const page: React.CSSProperties = { maxWidth: 1000, margin: '0 auto', padding: 'var(--space-2xl)', textAlign: 'center' };
     return (
@@ -193,16 +203,16 @@ export function ArticleSummaryPage() {
         <p style={{ color: 'var(--color-text-secondary)', marginBottom: 'var(--space-xl)' }}>还没有加入任何文献</p>
         <div style={{ display: 'flex', gap: 'var(--space-md)', justifyContent: 'center' }}>
           <button
-            style={{ padding: 'var(--space-md) var(--space-xl)', fontSize: 'var(--text-base)', fontWeight: 500, color: '#fff', background: 'var(--color-primary)', border: 'none', borderRadius: 'var(--radius-md)', cursor: 'pointer' }}
+            style={{ padding: 'calc(var(--space-md) * 0.7) calc(var(--space-xl) * 0.8)', fontSize: 'var(--text-base)', fontWeight: 600, color: '#fff', background: 'var(--color-primary)', border: 'none', borderRadius: 6, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', lineHeight: 1.2 }}
             onClick={() => navigate('/article-search')}
           >
-            ➕ 提交文献
+            提交文献
           </button>
           <button
-            style={{ padding: 'var(--space-md) var(--space-xl)', fontSize: 'var(--text-base)', fontWeight: 500, color: 'var(--color-text)', background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', cursor: 'pointer' }}
+            style={{ padding: 'calc(var(--space-md) * 0.7) calc(var(--space-xl) * 0.8)', fontSize: 'var(--text-base)', fontWeight: 600, color: 'var(--color-text)', background: 'var(--color-surface)', border: '2px solid var(--color-border)', borderRadius: 6, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', lineHeight: 1.2 }}
             onClick={() => navigate('/')}
           >
-            回搜索页
+            <span style={iconSpan}>◀️</span> 回搜索页
           </button>
         </div>
       </div>
@@ -215,7 +225,8 @@ export function ArticleSummaryPage() {
   const tdStyle: React.CSSProperties = { padding: 'var(--space-md)', fontSize: 'var(--text-xs)', lineHeight: 1.6, color: 'var(--color-text)', borderBottom: '1px solid var(--color-border)', verticalAlign: 'top', maxWidth: 300 };
   const summaryStyle: React.CSSProperties = { fontSize: 'var(--text-xs)', color: 'var(--color-text-secondary)', lineHeight: 1.5 };
   const removeBtn: React.CSSProperties = { padding: '2px 8px', fontSize: 'var(--text-xs)', color: 'var(--color-danger)', background: 'transparent', border: '1px solid var(--color-danger)', borderRadius: 'var(--radius-sm)', cursor: 'pointer' };
-  const btnSecondary: React.CSSProperties = { padding: 'var(--space-sm) var(--space-lg)', fontSize: 'var(--text-sm)', fontWeight: 500, color: 'var(--color-text)', background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', cursor: 'pointer' };
+  const iconSpan: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2em', lineHeight: 1, flexShrink: 0 };
+  const btnSecondary: React.CSSProperties = { padding: 'calc(var(--space-sm) * 0.7) calc(var(--space-lg) * 0.8)', fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--color-text)', background: 'var(--color-surface)', border: '2px solid var(--color-border)', borderRadius: 6, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.3em', lineHeight: 1.2 };
 
   const activeProteinCard: React.CSSProperties = {
     padding: 'var(--space-sm) var(--space-lg)',
@@ -228,6 +239,9 @@ export function ArticleSummaryPage() {
     flexShrink: 0,
     fontSize: 'var(--text-sm)',
     fontWeight: 600,
+    display: 'inline-flex',
+    alignItems: 'center',
+    lineHeight: 1.2,
   };
 
   const inactiveProteinCard: React.CSSProperties = {
@@ -248,7 +262,7 @@ export function ArticleSummaryPage() {
           </p>
         </div>
         <div style={{ display: 'flex', gap: 'var(--space-md)' }}>
-          <button style={btnSecondary} onClick={handleExportExcel}>📥 导出 Excel</button>
+          <button style={btnSecondary} onClick={handleExportExcel}>导出 Excel</button>
           <button
             style={btnSecondary}
             onClick={() => {
@@ -260,9 +274,9 @@ export function ArticleSummaryPage() {
               navigate(`/article-search?${params.toString()}`);
             }}
           >
-            ➕ 提交文献
+            提交文献
           </button>
-          <button style={btnSecondary} onClick={() => navigate('/')}>回搜索页</button>
+          <button style={btnSecondary} onClick={() => navigate('/')}><span style={iconSpan}>◀️</span> 回搜索页</button>
         </div>
       </header>
 
@@ -303,13 +317,17 @@ export function ArticleSummaryPage() {
               <tbody>
                 {entries.map((entry) => (
                   <tr key={entry.id}>
-                    <td style={tdStyle}>
-                      {(entry.title && entry.title !== entry.doi && entry.title !== entry.pdbId && entry.title !== entry.uniprot) ? (
-                        <div style={{ fontWeight: 600, fontSize: 'var(--text-xs)', marginBottom: 4 }}>{entry.title}</div>
-                      ) : (
-                        <div style={{ fontWeight: 600, fontSize: 'var(--text-xs)', marginBottom: 4 }}>{entry.pdbId || entry.uniprot}</div>
+                    <td
+                      style={{ ...tdStyle, cursor: 'pointer' }}
+                      onClick={() => handleTitleClick(entry)}
+                      title="点击查看文献分析详情"
+                    >
+                      <div style={{ fontWeight: 600, fontSize: 'var(--text-xs)', marginBottom: 4, color: 'var(--color-primary)' }}>
+                        {entry.title || entry.pdbId || entry.uniprot}
+                      </div>
+                      {entry.doi && (
+                        <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-secondary)', wordBreak: 'break-all' }}>{entry.doi}</div>
                       )}
-                      <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-secondary)', wordBreak: 'break-all' }}>{entry.doi}</div>
                     </td>
                     <td style={{ ...tdStyle, fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)' }}>{entry.pdbId}</td>
                     {COLUMNS.map((col) => {
@@ -359,7 +377,7 @@ export function ArticleSummaryPage() {
               navigate(`/article-search?${params.toString()}`);
             }}
           >
-            ➕ 提交文献
+            提交文献
           </button>
         </div>
       )}

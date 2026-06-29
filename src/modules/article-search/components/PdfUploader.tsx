@@ -86,7 +86,7 @@ export function PdfUploader({ onUpload, disabled }: PdfUploaderProps) {
 
   const submitBtn: React.CSSProperties = {
     marginTop: 'var(--space-lg)',
-    padding: 'var(--space-md) var(--space-2xl)',
+    padding: 'calc(var(--space-md) * 0.7) calc(var(--space-2xl) * 0.8)',
     fontSize: 'var(--text-base)',
     fontWeight: 600,
     color: '#fff',
@@ -95,6 +95,10 @@ export function PdfUploader({ onUpload, disabled }: PdfUploaderProps) {
     borderRadius: 'var(--radius-md)',
     cursor: mainFile && !disabled ? 'pointer' : 'not-allowed',
     width: '100%',
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    lineHeight: 1.2,
   };
 
   return (
@@ -179,7 +183,7 @@ export function PdfUploader({ onUpload, disabled }: PdfUploaderProps) {
         disabled={!mainFile || disabled}
         onClick={handleSubmit}
       >
-        {disabled ? '提取中...' : '🚀 提交分析'}
+        {disabled ? '提取中...' : '提交分析'}
       </button>
     </div>
   );
