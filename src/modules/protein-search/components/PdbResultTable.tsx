@@ -97,13 +97,13 @@ export function PdbResultTable({
                 <td className={styles.td}>
                   {s.coverage.map((c, i) => (
                     <div key={i} className={styles.structMeta}>
-                      <span className={styles.chainLabel}>Chain {c.chainId}</span>
-                      <span className={styles.orgName}>{c.organism}</span>
                       {c.uniprotStart != null && c.uniprotEnd != null && (
                         <div className={styles.residueRange}>
                           {c.uniprotStart}-{c.uniprotEnd} aa
                         </div>
                       )}
+                      <span className={styles.chainLabel}>Chain {c.chainId}</span>
+                      <span className={styles.orgName}>{c.organism}</span>
                     </div>
                   ))}
                   {s.resolution && (
