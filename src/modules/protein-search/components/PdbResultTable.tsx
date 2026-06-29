@@ -103,7 +103,7 @@ export function PdbResultTable({
                         </div>
                       )}
                       <span className={styles.chainLabel}>Chain {c.chainId}</span>
-                      <span className={styles.orgName}>{c.organism}</span>
+                      <div className={styles.orgName}>{c.organism}</div>
                     </div>
                   ))}
                   {s.resolution && (
