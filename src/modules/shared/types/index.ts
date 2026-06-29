@@ -54,7 +54,7 @@ export interface EntityCoverage {
   chainId: string;                    // pdbx_strand_id (多个逗号分隔)
   uniprotAccession: string | null;    // 匹配到的 UniProt accession
   organism: string;                   // 表达/来源生物
-  sequence: string;                   // 一级序列 (entity_poly.rcsb_seq_one_letter_code)
+  sequence: string;                   // 一级序列 (entity_poly.pdbx_seq_one_letter_code)
   /** 结构覆盖的残基范围（UniProt 编号） */
   uniprotStart: number | null;
   uniprotEnd: number | null;
@@ -169,28 +169,42 @@ export interface RcsbEntryResponse {
 
 export interface RcsbPolymerEntityResponse {
   entity_poly?: {
-    rcsb_uniprot_accession?: Array<{
-      rcbs_id?: string;
-    }>;
     pdbx_strand_id?: string;
+    pdbx_seq_one_letter_code?: string;
+    pdbx_seq_one_letter_code_can?: string;
     rcsb_entity_polymer_type?: string;
-    rcsb_seq_one_letter_code?: string;
-    rcsb_uniprot_alignments?: Array<{
+  };
+  /** UniProt / SIFTS 比对数据（Sequence Annotations 中 PDB_ENTITY 的数据源） */
+  rcsb_polymer_entity_align?: Array<{
+    provenance_source?: string;
+    reference_database_accession?: string;
+    reference_database_name?: string;
+    aligned_regions?: Array<{
+      entity_beg_seq_id?: number;
+      length?: number;
+      ref_beg_seq_id?: number;
+      ref_end_seq_id?: number;
+    }>;
+  }>;
+  /** Pfam / 特征区域 */
+  rcsb_polymer_entity_feature?: Array<{
+    feature_id?: string;
+    name?: string;
+    type?: string;
+    provenance_source?: string;
+    feature_positions?: Array<{
       beg_seq_id?: number;
       end_seq_id?: number;
-      feature_positions?: Array<{
-        beg_seq_id?: number;
-        end_seq_id?: number;
-        type?: string;
-        name?: string;
-      }>;
+      values?: number[];
     }>;
-  };
+  }>;
   rcsb_entity_source_organism?: Array<{
     ncbi_scientific_name?: string;
   }>;
   rcsb_polymer_entity_container_identifiers?: {
     entity_id?: number;
+    asym_ids?: string[];
+    auth_asym_ids?: string[];
   };
 }
 

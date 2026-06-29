@@ -195,15 +195,36 @@ async function getSinglePdbStructure(
 }
 
 function parsePolymerEntity(poly: RcsbPolymerEntityResponse): EntityCoverage {
-  const alignments = poly.entity_poly?.rcsb_uniprot_alignments || [];
-  const features: StructureFeature[] = [];
+  // 找 UniProt 比对（SIFTS 来源）
+  const uniprotAlign = (poly.rcsb_polymer_entity_align || []).find(
+    (a) => a.reference_database_name === 'UniProt',
+  );
 
-  for (const align of alignments) {
-    for (const fp of align.feature_positions || []) {
-      if (fp.type && fp.name) {
+  // UniProt accession
+  const uniprotAccession =
+    uniprotAlign?.reference_database_accession || null;
+
+  // 残基范围：取第一个 aligned_region 的 UniProt 坐标
+  let uniprotStart: number | null = null;
+  let uniprotEnd: number | null = null;
+  if (uniprotAlign?.aligned_regions?.length) {
+    const region = uniprotAlign.aligned_regions[0];
+    uniprotStart = region.ref_beg_seq_id ?? null;
+    if (uniprotStart != null) {
+      uniprotEnd =
+        region.ref_end_seq_id ??
+        uniprotStart + (region.length ?? 0) - 1;
+    }
+  }
+
+  // 特征区域 (Pfam 等，来自 rcsb_polymer_entity_feature)
+  const features: StructureFeature[] = [];
+  for (const feat of poly.rcsb_polymer_entity_feature || []) {
+    if (feat.type && feat.name) {
+      for (const fp of feat.feature_positions || []) {
         features.push({
-          type: fp.type,
-          name: fp.name,
+          type: feat.type,
+          name: feat.name,
           start: fp.beg_seq_id || 0,
           end: fp.end_seq_id || 0,
         });
@@ -211,32 +232,36 @@ function parsePolymerEntity(poly: RcsbPolymerEntityResponse): EntityCoverage {
     }
   }
 
+  // 序列覆盖比例（优先用 Pfam 特征区域计算）
   let coverageRatio = 0;
-  if (alignments.length > 0) {
-    const fp = alignments[0].feature_positions || [];
-    if (fp.length > 0) {
-      const seqLen = poly.entity_poly?.rcsb_seq_one_letter_code?.length || 1;
-      const covered = fp.reduce(
-        (sum, f) => sum + ((f.end_seq_id || 0) - (f.beg_seq_id || 0) + 1),
-        0,
-      );
-      coverageRatio = Math.min(1, Math.max(0, covered / seqLen));
+  const seqLen =
+    poly.entity_poly?.pdbx_seq_one_letter_code?.length ||
+    poly.entity_poly?.pdbx_seq_one_letter_code_can?.length ||
+    1;
+  const pfamFeatures = (poly.rcsb_polymer_entity_feature || []).filter(
+    (f) => f.type === 'Pfam',
+  );
+  if (pfamFeatures.length > 0) {
+    let covered = 0;
+    for (const pf of pfamFeatures) {
+      for (const fp of pf.feature_positions || []) {
+        covered += (fp.end_seq_id || 0) - (fp.beg_seq_id || 0) + 1;
+      }
     }
+    coverageRatio = Math.min(1, Math.max(0, covered / seqLen));
   }
 
-  // 提取 UniProt 比对残基范围（取第一条 alignment 的 beg/end）
-  const primaryAlign = alignments[0];
-  const uniprotStart = primaryAlign?.beg_seq_id ?? null;
-  const uniprotEnd = primaryAlign?.end_seq_id ?? null;
-
   return {
-    entityId: poly.rcsb_polymer_entity_container_identifiers?.entity_id || 0,
+    entityId:
+      poly.rcsb_polymer_entity_container_identifiers?.entity_id || 0,
     chainId: poly.entity_poly?.pdbx_strand_id || '-',
-    uniprotAccession:
-      poly.entity_poly?.rcsb_uniprot_accession?.[0]?.rcbs_id || null,
+    uniprotAccession,
     organism:
       poly.rcsb_entity_source_organism?.[0]?.ncbi_scientific_name || '-',
-    sequence: poly.entity_poly?.rcsb_seq_one_letter_code || '',
+    sequence:
+      poly.entity_poly?.pdbx_seq_one_letter_code ||
+      poly.entity_poly?.pdbx_seq_one_letter_code_can ||
+      '',
     uniprotStart,
     uniprotEnd,
     features,
