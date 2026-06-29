@@ -81,6 +81,17 @@ export function deleteArticleHistory(id: string): void {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
 }
 
+/** 按 doi + uniprot 删除匹配的提取缓存 */
+export function deleteArticleExtractionsByKeys(
+  pairs: Array<{ doi: string; uniprot: string }>,
+): void {
+  const keys = new Set(pairs.map((p) => `${p.doi}|${p.uniprot}`));
+  const remaining = loadAllArticleHistory().filter(
+    (e) => !keys.has(`${e.doi}|${e.uniprot}`),
+  );
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(remaining));
+}
+
 function genId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }

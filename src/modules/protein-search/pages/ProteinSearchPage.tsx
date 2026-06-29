@@ -18,6 +18,9 @@ import {
   restoreProteinSearchState,
   restoreScrollPosition,
 } from '../services/statePreservationService';
+import { deleteArticleExtractionsByKeys } from '../../article-search/services/articleHistoryService';
+import { loadSummary, saveSummary } from '../../article-search/services/summaryStorage';
+import { clearPendingPdfs } from '../../article-search/services/pdfFileCache';
 import type { UniProtCandidate, PdbStructure, SearchHistoryEntry } from '../../shared/types';
 
 type Phase =
@@ -200,7 +203,36 @@ export function ProteinSearchPage() {
     });
   }, []);
 
-  const handleDelete = useCallback((id: string) => { deleteHistory(id); setHistory(loadHistory()); }, []);
+  const handleDelete = useCallback((id: string) => {
+    // 找到要删除的历史条目，联动删除其关联缓存
+    const entry = history.find((h) => h.id === id);
+    if (entry) {
+      // 收集该条目中所有唯一的 (doi, uniprot) 对
+      const pairs: Array<{ doi: string; uniprot: string }> = [];
+      const seen = new Set<string>();
+      for (const pdb of entry.pdbResults) {
+        if (pdb.doi) {
+          const key = `${pdb.doi}|${entry.protein.accession}`;
+          if (!seen.has(key)) {
+            seen.add(key);
+            pairs.push({ doi: pdb.doi, uniprot: entry.protein.accession });
+          }
+        }
+      }
+      // 联动删除：文献提取缓存 + 汇总条目
+      if (pairs.length > 0) {
+        deleteArticleExtractionsByKeys(pairs);
+        const summary = loadSummary();
+        const dropKeys = new Set(pairs.map((p) => `${p.doi}|${p.uniprot}`));
+        saveSummary(summary.filter((s) => !dropKeys.has(`${s.doi}|${s.uniprot}`)));
+      }
+      // 清除 PDF 文件缓存
+      clearPendingPdfs();
+    }
+    // 删除搜索历史本身
+    deleteHistory(id);
+    setHistory(loadHistory());
+  }, [history]);
 
   const handleBeforeAnalyze = useCallback(() => {
     if (selectedProtein) {
