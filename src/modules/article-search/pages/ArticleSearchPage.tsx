@@ -270,16 +270,16 @@ export function ArticleSearchPage() {
         </div>
       )}
 
+      {/* 导航条 —— 所有阶段可见 */}
+      <div style={{ display: 'flex', gap: 'var(--space-sm)', marginBottom: 'var(--space-lg)' }}>
+        <button onClick={handleBack} style={btnBlue}><span style={iconSpan}>◀️</span> 返回搜索</button>
+        <button onClick={() => navigate(`/article-summary?uniprot=${encodeURIComponent(uniprot)}&gene=${encodeURIComponent(gene)}`)} style={btnPink}><span style={iconSpan}>◀️</span> 返回汇总</button>
+      </div>
+
       {/* 上传 + 提取 */}
       {!extraction && (
         <div style={card}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-lg)' }}>
-            <h2 style={{ fontSize: 'var(--text-base)', fontWeight: 600 }}>上传文献</h2>
-            <div style={{ display: 'flex', gap: 'var(--space-sm)' }}>
-              <button onClick={handleBack} style={btnBlue}><span style={iconSpan}>◀️</span> 返回搜索</button>
-              <button onClick={() => navigate(`/article-summary?uniprot=${encodeURIComponent(uniprot)}&gene=${encodeURIComponent(gene)}`)} style={btnPink}><span style={iconSpan}>◀️</span> 返回汇总</button>
-            </div>
-          </div>
+          <h2 style={{ fontSize: 'var(--text-base)', fontWeight: 600, marginBottom: 'var(--space-lg)' }}>上传文献</h2>
           <PdfUploader onUpload={handleUpload} disabled={phase === 'extracting'} />
           {phase === 'extracting' && (
             <div style={{ textAlign: 'center', padding: 'var(--space-xl)', color: 'var(--color-text-secondary)' }}>
@@ -311,13 +311,14 @@ export function ArticleSearchPage() {
           <ExtractionResult extraction={extraction} />
           <div style={{ display: 'flex', gap: 'var(--space-md)', marginTop: 'var(--space-xl)', marginBottom: 'var(--space-2xl)' }}>
             <button onClick={handleReset} style={btnSecondary}><span style={emojiSpan}>🔄</span> 重新上传</button>
-            <button onClick={handleBack} style={btnSecondary}><span style={iconSpan}>◀️</span> 返回搜索</button>
             {added ? (
               <button onClick={handleToggleSummary} style={btnSuccess}>已加入汇总（点击取消）</button>
             ) : (
               <button onClick={handleToggleSummary} style={btnSecondary}><span style={iconSpan}>➕</span> 加入汇总</button>
             )}
-            <button onClick={() => navigate(`/article-summary?uniprot=${encodeURIComponent(uniprot)}&gene=${encodeURIComponent(gene)}`)} style={btnPrimary}>查看汇总对比</button>
+            {added && (
+              <button onClick={() => navigate(`/article-summary?uniprot=${encodeURIComponent(uniprot)}&gene=${encodeURIComponent(gene)}`)} style={btnPrimary}>查看汇总对比</button>
+            )}
           </div>
         </>
       )}
