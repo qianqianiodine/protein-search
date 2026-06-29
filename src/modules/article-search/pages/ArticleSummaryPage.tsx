@@ -188,6 +188,7 @@ export function ArticleSummaryPage() {
   const handleTitleClick = (entry: SummaryEntry) => {
     const params = new URLSearchParams();
     if (entry.doi) params.set('doi', entry.doi);
+    if (entry.id) params.set('extractionId', entry.id);
     if (entry.pdbId) params.set('pdb', entry.pdbId);
     if (entry.uniprot) params.set('uniprot', entry.uniprot);
     if (entry.proteinName) params.set('proteinName', entry.proteinName);

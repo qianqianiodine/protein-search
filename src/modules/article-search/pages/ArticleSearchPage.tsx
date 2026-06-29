@@ -27,10 +27,10 @@ export function ArticleSearchPage() {
   const paperTitle = searchParams.get('title') || '';
   const extractionId = searchParams.get('extractionId') || '';
 
-  // 页面加载时检查缓存：优先 extractionId，其次 uniprot（doi 可为空），否则 null
+  // 页面加载时检查缓存：优先 extractionId，其次 doi+uniprot（无 doi → 新提交不查缓存）
   const cached = extractionId
     ? loadArticleExtractionById(extractionId)
-    : uniprot
+    : doi && uniprot
       ? loadArticleExtraction(doi, uniprot)
       : null;
   const [phase, setPhase] = useState<Phase>(cached ? 'done' : 'idle');
@@ -44,10 +44,10 @@ export function ArticleSearchPage() {
 
   // Bug③修复：当 doi/uniprot 变化时（如同页面从通知跳转到不同文献），重置所有状态
   useEffect(() => {
-    // 先按 extractionId 查找，再按 uniprot（doi 可为空）查找
+    // 先按 extractionId 查找，再按 doi+uniprot 查找（无 doi → 新提交，不查缓存）
     const newCached = extractionId
       ? loadArticleExtractionById(extractionId)
-      : uniprot
+      : doi && uniprot
         ? loadArticleExtraction(doi, uniprot)
         : null;
     if (newCached) {
@@ -59,7 +59,7 @@ export function ArticleSearchPage() {
     } else {
       const existingTask = extractionId
         ? analysisTaskManager.getTask(extractionId)
-        : uniprot
+        : doi && uniprot
           ? analysisTaskManager.getTaskByMetadata(doi, uniprot)
           : undefined;
       if (existingTask?.status === 'completed' && existingTask.extraction) {
