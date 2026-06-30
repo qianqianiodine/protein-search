@@ -6,6 +6,7 @@ import { addToSummary, isInSummary, removeFromSummary, loadSummary } from '../se
 import {
   loadArticleExtraction,
   loadArticleExtractionById,
+  findExtractionByProtein,
 } from '../services/articleHistoryService';
 import { PdfUploader } from '../components/PdfUploader';
 import { ExtractionResult } from '../components/ExtractionResult';
@@ -28,8 +29,10 @@ export function ArticleSearchPage() {
   const extractionId = searchParams.get('extractionId') || '';
 
   // 页面加载时检查缓存：优先 extractionId，其次 doi+uniprot（无 doi → 新提交不查缓存）
+  // extractionId 查不到时，兜底用 uniprot+gene 模糊匹配（修复无 DOI 手动上传从汇总页跳回详情页找不到缓存的问题）
   const cached = extractionId
-    ? loadArticleExtractionById(extractionId)
+    ? (loadArticleExtractionById(extractionId) ||
+       (uniprot ? findExtractionByProtein(uniprot, gene) : null))
     : doi && uniprot
       ? loadArticleExtraction(doi, uniprot)
       : null;
@@ -45,8 +48,10 @@ export function ArticleSearchPage() {
   // Bug③修复：当 doi/uniprot 变化时（如同页面从通知跳转到不同文献），重置所有状态
   useEffect(() => {
     // 先按 extractionId 查找，再按 doi+uniprot 查找（无 doi → 新提交，不查缓存）
+    // extractionId 查不到时，兜底用 uniprot+gene 模糊匹配
     const newCached = extractionId
-      ? loadArticleExtractionById(extractionId)
+      ? (loadArticleExtractionById(extractionId) ||
+         (uniprot ? findExtractionByProtein(uniprot, gene) : null))
       : doi && uniprot
         ? loadArticleExtraction(doi, uniprot)
         : null;
@@ -300,15 +305,24 @@ export function ArticleSearchPage() {
               📦 从历史记录恢复。如需重新提取，请点击下方按钮。
             </div>
           )}
-          {!extraction.verified && extraction.verificationNote && (
-            <div style={{ padding: 'var(--space-md) var(--space-lg)', marginBottom: 'var(--space-md)', background: '#FFF3E0', border: '1px solid #E65100', borderRadius: 'var(--radius-md)', fontSize: 'var(--text-sm)', color: '#E65100', fontWeight: 500 }}>
-              ⚠️ 文献匹配警告：{extraction.verificationNote}
+          {/* 无 PDB + 无 DOI → 手动上传文献，无法验证，展示论文标题 */}
+          {!pdb && !doi ? (
+            <div style={{ padding: 'var(--space-sm) var(--space-md)', marginBottom: 'var(--space-md)', background: '#EDF3F7', borderRadius: 'var(--radius-md)', fontSize: 'var(--text-sm)', color: 'var(--color-text)', fontWeight: 500 }}>
+              📄 {extraction.paperTitle || '未提取到论文标题'}
             </div>
-          )}
-          {extraction.verified && extraction.verificationNote && (
-            <div style={{ padding: 'var(--space-sm) var(--space-md)', marginBottom: 'var(--space-md)', background: '#E8F5E9', borderRadius: 'var(--radius-md)', fontSize: 'var(--text-xs)', color: '#2E7D32' }}>
-              {extraction.verificationNote}
-            </div>
+          ) : (
+            <>
+              {!extraction.verified && extraction.verificationNote && (
+                <div style={{ padding: 'var(--space-md) var(--space-lg)', marginBottom: 'var(--space-md)', background: '#FFF3E0', border: '1px solid #E65100', borderRadius: 'var(--radius-md)', fontSize: 'var(--text-sm)', color: '#E65100', fontWeight: 500 }}>
+                  ⚠️ 文献匹配警告：{extraction.verificationNote}
+                </div>
+              )}
+              {extraction.verified && extraction.verificationNote && (
+                <div style={{ padding: 'var(--space-sm) var(--space-md)', marginBottom: 'var(--space-md)', background: '#E8F5E9', borderRadius: 'var(--radius-md)', fontSize: 'var(--text-xs)', color: '#2E7D32' }}>
+                  {extraction.verificationNote}
+                </div>
+              )}
+            </>
           )}
           <ExtractionResult extraction={extraction} />
           <div style={{ display: 'flex', gap: 'var(--space-md)', marginTop: 'var(--space-xl)', marginBottom: 'var(--space-2xl)' }}>

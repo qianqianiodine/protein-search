@@ -49,10 +49,12 @@ export function loadArticleExtractionById(
 export function saveArticleExtraction(entry: ArticleHistoryEntry): void {
   const history = loadAllArticleHistory();
 
-  // 去重：相同 doi + uniprot 覆盖
-  const idx = history.findIndex(
-    (e) => e.doi === entry.doi && e.uniprot === entry.uniprot,
-  );
+  // 去重：相同 doi + uniprot 覆盖（doi 为空说明是手动上传，不做去重，每条独立）
+  const idx = entry.doi
+    ? history.findIndex(
+        (e) => e.doi === entry.doi && e.uniprot === entry.uniprot,
+      )
+    : -1;
   if (idx !== -1) {
     history.splice(idx, 1);
   }
@@ -79,6 +81,21 @@ export function saveArticleExtraction(entry: ArticleHistoryEntry): void {
 export function deleteArticleHistory(id: string): void {
   const history = loadAllArticleHistory().filter((e) => e.id !== id);
   localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
+}
+
+/** 按 uniprot + gene 模糊查找（无 DOI 文献从汇总页跳回详情页的兜底） */
+export function findExtractionByProtein(
+  uniprot: string,
+  gene?: string,
+): ArticleHistoryEntry | null {
+  const all = loadAllArticleHistory();
+  // 优先精确匹配 uniprot + gene
+  if (gene) {
+    const match = all.find((e) => e.uniprot === uniprot && e.gene === gene);
+    if (match) return match;
+  }
+  // 回退：仅按 uniprot 匹配（取最新）
+  return all.find((e) => e.uniprot === uniprot) || null;
 }
 
 /** 按 doi + uniprot 删除匹配的提取缓存 */
