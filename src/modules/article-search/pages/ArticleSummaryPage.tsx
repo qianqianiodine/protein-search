@@ -1,10 +1,38 @@
 import { useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import * as XLSX from 'xlsx';
-import JSZip from 'jszip';
+import ExcelJS from 'exceljs';
 import { loadSummary, removeFromSummary } from '../services/summaryStorage';
 import { renderMarkdown, stripMarkdown } from '../../shared/utils/markdown';
 import type { ArticleExtraction, SummaryEntry } from '../../shared/types';
+
+const EXCEL_FONT_COLORS: Record<string, string> = {
+  construct: '4A6A8A',
+  expression: '3A6B3A',
+  purification: '8A6A4A',
+  crystallization: '6A4A8A',
+};
+
+/** 将 markdown 文本拆成 ExcelJS 富文本段：**粗体** + 数字变色 */
+function markdownToRichText(md: string, section: string): ExcelJS.RichText[] {
+  const color = EXCEL_FONT_COLORS[section] || '4A6A8A';
+  const segments = md.split(/(\*\*.*?\*\*)/g);
+  const richText: ExcelJS.RichText[] = [];
+  for (const seg of segments) {
+    if (!seg) continue;
+    const m = seg.match(/^\*\*(.*?)\*\*$/);
+    if (m) {
+      const txt = m[1];
+      const font: { bold: boolean; color?: { argb: string } } = { bold: true };
+      if (/\d/.test(txt)) {
+        font.color = { argb: 'FF' + color };
+      }
+      richText.push({ font, text: txt });
+    } else {
+      richText.push({ text: seg });
+    }
+  }
+  return richText;
+}
 
 const COLUMNS: Array<{ key: keyof ArticleExtraction; label: string }> = [
   { key: 'construct', label: '蛋白构建' },
@@ -94,46 +122,25 @@ export function ArticleSummaryPage() {
     return text.length > 100 ? text.slice(0, 100) + '...' : text;
   };
 
-  const EXCEL_FONT_COLORS: Record<string, string> = {
-    construct: '4A6A8A',
-    expression: '3A6B3A',
-    purification: '8A6A4A',
-    crystallization: '6A4A8A',
-  };
-
-  const markdownToRichRuns = (md: string, section: string): string => {
-    const color = EXCEL_FONT_COLORS[section] || '4A6A8A';
-    const segments = md.split(/(\*\*.*?\*\*)/g);
-    const runs: string[] = [];
-    for (const seg of segments) {
-      if (!seg) continue;
-      const m = seg.match(/^\*\*(.*?)\*\*$/);
-      if (m) {
-        const txt = escapeXml(m[1]);
-        if (/\d/.test(txt)) {
-          runs.push(`<r><rPr><b/><color rgb="FF${color}"/></rPr><t>${txt}</t></r>`);
-        } else {
-          runs.push(`<r><rPr><b/></rPr><t>${txt}</t></r>`);
-        }
-      } else {
-        runs.push(`<r><t xml:space="preserve">${escapeXml(seg)}</t></r>`);
-      }
-    }
-    return runs.join('');
-  };
-
-  const escapeXml = (s: string): string =>
-    s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-
   const handleExportExcel = async () => {
     const gene = selectedProtein?.gene || entries[0]?.gene || entries[0]?.uniprot || '未知蛋白';
     const date = new Date().toISOString().slice(0, 10);
     const filename = `${gene}_纯化表达文献汇总_${date}.xlsx`;
 
-    const header = ['文献', 'PDB', '蛋白构建', '表达', '纯化', '结晶'];
-    const rows: string[][] = [header];
+    const wb = new ExcelJS.Workbook();
+    const ws = wb.addWorksheet('汇总对比');
+
+    // 列宽
+    ws.columns = [
+      { width: 30 }, { width: 12 }, { width: 50 }, { width: 50 }, { width: 50 }, { width: 50 },
+    ];
+
+    // 标题行（粗体）
+    const headerRow = ws.addRow(['文献', 'PDB', '蛋白构建', '表达', '纯化', '结晶']);
+    headerRow.font = { bold: true };
+
     for (const e of entries) {
-      rows.push([
+      const row = ws.addRow([
         e.doi || e.title || e.pdbId || e.uniprot,
         e.pdbId,
         stripMarkdown(e.extraction.construct),
@@ -141,39 +148,19 @@ export function ArticleSummaryPage() {
         stripMarkdown(e.extraction.purification),
         stripMarkdown(e.extraction.crystallization),
       ]);
-    }
 
-    const ws = XLSX.utils.aoa_to_sheet(rows);
-    ws['!cols'] = [{ wch: 30 }, { wch: 12 }, { wch: 50 }, { wch: 50 }, { wch: 50 }, { wch: 50 }];
-
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, '汇总对比');
-    const wbout = XLSX.write(wb, { type: 'array', bookSST: true });
-
-    const richTextMap = new Map<string, string>();
-    for (const e of entries) {
-      for (const col of COLUMNS) {
-        const plainText = stripMarkdown(e.extraction[col.key]);
-        if (!richTextMap.has(plainText)) {
-          richTextMap.set(plainText, markdownToRichRuns(e.extraction[col.key], col.key));
+      // 对每个提取字段，检测是否有 markdown **bold** 格式，有则用富文本
+      const cols = COLUMNS;
+      for (let i = 0; i < cols.length; i++) {
+        const rawText = e.extraction[cols[i].key];
+        if (/\*\*.*?\*\*/.test(rawText)) {
+          row.getCell(i + 3).value = { richText: markdownToRichText(rawText, cols[i].key) };
         }
       }
     }
 
-    const zip = await JSZip.loadAsync(wbout);
-    const sstFile = zip.file('xl/sharedStrings.xml');
-    if (sstFile) {
-      let sstXml = await sstFile.async('string');
-      for (const [plainText, richRuns] of richTextMap) {
-        const escaped = plainText.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-        const escapedForRegex = escaped.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        const regex = new RegExp(`<si><t(?: xml:space="preserve")?>${escapedForRegex}</t></si>`, 'g');
-        sstXml = sstXml.replace(regex, `<si>${richRuns}</si>`);
-      }
-      zip.file('xl/sharedStrings.xml', sstXml);
-    }
-
-    const blob = await zip.generateAsync({ type: 'blob' });
+    const buf = await wb.xlsx.writeBuffer();
+    const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
