@@ -15,6 +15,7 @@ export interface UniProtCandidate {
   cofactors: CofactorRef[];   // UniProt cofactorCrossReference (从详情接口获取)
   reviewed: boolean;          // Swiss-Prot (reviewed) = true, TrEMBL = false
   speciesLabel: string;       // 物种简称标签（从 entry name 后缀提取，预计算）
+  subcellularLocation: string; // 亚细胞定位（首个 location value），无数据则为空字符串
 }
 
 /** UniProt 辅因子交叉引用 */
@@ -123,6 +124,12 @@ export interface UniProtSearchResponse {
       length: number;
     };
     entryType?: string;  // "UniProtKB reviewed (Swiss-Prot)" or "UniProtKB unreviewed (TrEMBL)"
+    comments?: Array<{
+      commentType: string;
+      subcellularLocations?: Array<{
+        location?: { value: string };
+      }>;
+    }>;
   }>;
 }
 
@@ -241,6 +248,7 @@ export interface SearchHistoryEntry {
     length: number;
     reviewed: boolean;
     speciesLabel: string;
+    subcellularLocation: string;
   };
   pdbResults: PdbStructure[];
   sortState: Record<string, unknown>;

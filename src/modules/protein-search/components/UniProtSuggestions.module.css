@@ -98,3 +98,15 @@
   border-radius: 3px;
   vertical-align: middle;
 }
+
+.locationTag {
+  display: inline-block;
+  margin-left: 4px;
+  padding: 0 5px;
+  font-size: 10px;
+  font-weight: 500;
+  color: #5A7D5A;
+  background: #E8F2E8;
+  border-radius: 3px;
+  vertical-align: middle;
+}

@@ -18,7 +18,7 @@ export async function searchProteins(
   signal?: AbortSignal,
 ): Promise<UniProtCandidate[]> {
   const taxFilter = taxId !== 0 ? `+AND+taxonomy_id:${taxId}` : '';
-  const url = `${UNIPROT_BASE}/search?query=${encodeURIComponent(query)}${taxFilter}&size=10&fields=accession,id,gene_names,protein_name,organism_name,length`;
+  const url = `${UNIPROT_BASE}/search?query=${encodeURIComponent(query)}${taxFilter}&size=10&fields=accession,id,gene_names,protein_name,organism_name,length,cc_subcellular_location`;
   const data = await apiFetch<UniProtSearchResponse>(url, { signal });
 
   return data.results.map((r) => ({
@@ -33,6 +33,7 @@ export async function searchProteins(
     reviewed: r.entryType?.includes('reviewed') ?? false,
     cofactors: [], // 从详情接口再获取
     speciesLabel: extractSpeciesLabel(r.uniProtkbId, r.organism?.scientificName || '-'),
+    subcellularLocation: extractSubcellularLocation(r.comments),
   }));
 }
 
@@ -62,6 +63,23 @@ export async function getProteinDetail(
     }
   }
   return cofactors;
+}
+
+/** 从 UniProt comments 中提取首个亚细胞定位 */
+function extractSubcellularLocation(
+  comments?: Array<{
+    commentType: string;
+    subcellularLocations?: Array<{
+      location?: { value: string };
+    }>;
+  }>,
+): string {
+  if (!comments) return '';
+  const locComment = comments.find((c) => c.commentType === 'SUBCELLULAR LOCATION');
+  if (!locComment?.subcellularLocations) return '';
+  // 只取第一个 location.value，避免过长
+  const first = locComment.subcellularLocations.find((s) => s.location?.value);
+  return first?.location?.value || '';
 }
 
 /** 从 UniProt entry name 后缀提取物种标签（如 PTEN_HUMAN → Human） */

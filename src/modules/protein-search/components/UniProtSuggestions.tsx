@@ -39,6 +39,9 @@ export function UniProtSuggestions({
               {c.name}
               {c.reviewed && <span className={styles.reviewedBadge}>Swiss-Prot</span>}
               <span className={styles.speciesTag}>{c.speciesLabel}</span>
+              {c.subcellularLocation && (
+                <span className={styles.locationTag}>{c.subcellularLocation}</span>
+              )}
             </div>
             <div className={styles.meta}>
               {c.gene} · {c.organism}
