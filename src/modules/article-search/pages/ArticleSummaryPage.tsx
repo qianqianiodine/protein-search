@@ -44,6 +44,7 @@ const COLUMNS: Array<{ key: keyof ArticleExtraction; label: string }> = [
 // ---- protein group logic ----
 
 interface ProteinGroup {
+  key: string;          // 复合键: uniprot || gene || '__unknown__'
   uniprot: string;
   gene: string;
   proteinName: string;
@@ -68,7 +69,7 @@ function buildProteinGroups(entries: SummaryEntry[]): ProteinGroup[] {
     if (map.has(key)) {
       map.get(key)!.count++;
     } else {
-      map.set(key, { uniprot: e.uniprot, gene: e.gene, proteinName: e.proteinName, count: 1 });
+      map.set(key, { key, uniprot: e.uniprot, gene: e.gene, proteinName: e.proteinName, count: 1 });
     }
   }
   return [...map.values()];
@@ -78,22 +79,28 @@ export function ArticleSummaryPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const initialUniprot = searchParams.get('uniprot') || '';
+  const initialGene = searchParams.get('gene') || '';
 
   const allEntries = loadSummary();
   const proteinGroups = useMemo(() => buildProteinGroups(allEntries), [allEntries]);
 
-  const [selectedUniprot, setSelectedUniprot] = useState<string>(
-    initialUniprot && proteinGroups.some((p) => p.uniprot === initialUniprot)
-      ? initialUniprot
-      : proteinGroups[0]?.uniprot || '',
+  // 复合键匹配：uniprot || gene，与 buildProteinGroups 一致
+  const initialKey = initialUniprot || initialGene || '';
+  const [selectedKey, setSelectedKey] = useState<string>(
+    initialKey && proteinGroups.some((p) => p.key === initialKey)
+      ? initialKey
+      : proteinGroups[0]?.key || '',
   );
 
   const entries = useMemo(() => {
-    if (!selectedUniprot) return [];
-    return allEntries.filter((e) => e.uniprot === selectedUniprot);
-  }, [allEntries, selectedUniprot]);
+    if (!selectedKey || selectedKey === '__unknown__') return [];
+    return allEntries.filter((e) => {
+      const entryKey = e.uniprot || e.gene || '__unknown__';
+      return entryKey === selectedKey;
+    });
+  }, [allEntries, selectedKey]);
 
-  const selectedProtein = proteinGroups.find((p) => p.uniprot === selectedUniprot);
+  const selectedProtein = proteinGroups.find((p) => p.key === selectedKey);
 
   const setEntriesRefresh = useState(0)[1];
   const refresh = () => setEntriesRefresh((n) => n + 1);
@@ -257,7 +264,9 @@ export function ArticleSummaryPage() {
             onClick={() => {
               const p = selectedProtein;
               const params = new URLSearchParams();
+              // uniprot 为空时用 gene 作为蛋白标识（与 buildProteinGroups 复合键一致）
               if (p?.uniprot) params.set('uniprot', p.uniprot);
+              else if (p?.gene) params.set('uniprot', p.gene);
               if (p?.proteinName) params.set('proteinName', p.proteinName);
               if (p?.gene) params.set('gene', p.gene);
               navigate(`/article-search?${params.toString()}`);
@@ -272,10 +281,10 @@ export function ArticleSummaryPage() {
       {/* ---- 蛋白选择面板 ---- */}
       <div style={{ display: 'flex', gap: 'var(--space-md)', overflowX: 'auto', paddingBottom: 'var(--space-md)', marginBottom: 'var(--space-xl)' }}>
         {proteinGroups.map((p) => {
-          const isActive = p.uniprot === selectedUniprot;
+          const isActive = p.key === selectedKey;
           const style = isActive ? activeProteinCard : inactiveProteinCard;
           return (
-            <button key={p.uniprot} style={style} onClick={() => setSelectedUniprot(p.uniprot)}>
+            <button key={p.key} style={style} onClick={() => setSelectedKey(p.key)}>
               {proteinLabel(p)} · {p.count} 篇
             </button>
           );
@@ -325,7 +334,7 @@ export function ArticleSummaryPage() {
                       const fullText = entry.extraction[col.key];
                       const hasSummary = !!entry.extraction.summaries?.[col.key];
                       return (
-                        <td key={col.key} style={{ ...tdStyle, cursor: fullText ? 'pointer' : 'default' }} onClick={() => fullText && toggleCell(ck)}>
+                        <td key={col.key} style={{ ...tdStyle, cursor: fullText && !isExpanded ? 'pointer' : 'default' }} onClick={() => { if (fullText && !isExpanded) toggleCell(ck); }}>
                           {isExpanded ? (
                             <div dangerouslySetInnerHTML={{ __html: renderMarkdown(fullText, col.key) }} />
                           ) : (
@@ -337,7 +346,10 @@ export function ArticleSummaryPage() {
                             </div>
                           )}
                           {isExpanded && (
-                            <span style={{ color: 'var(--color-primary)', fontSize: 'var(--text-xs)', marginTop: 4, display: 'inline-block' }}>收起</span>
+                            <span
+                              style={{ color: 'var(--color-primary)', fontSize: 'var(--text-xs)', marginTop: 4, display: 'inline-block', cursor: 'pointer' }}
+                              onClick={(e) => { e.stopPropagation(); toggleCell(ck); }}
+                            >收起</span>
                           )}
                         </td>
                       );
@@ -360,7 +372,9 @@ export function ArticleSummaryPage() {
             onClick={() => {
               const p = selectedProtein;
               const params = new URLSearchParams();
+              // uniprot 为空时用 gene 作为蛋白标识（与 buildProteinGroups 复合键一致）
               if (p?.uniprot) params.set('uniprot', p.uniprot);
+              else if (p?.gene) params.set('uniprot', p.gene);
               if (p?.proteinName) params.set('proteinName', p.proteinName);
               if (p?.gene) params.set('gene', p.gene);
               navigate(`/article-search?${params.toString()}`);
