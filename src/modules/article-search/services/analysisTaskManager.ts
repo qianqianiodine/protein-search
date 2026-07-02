@@ -135,6 +135,8 @@ class AnalysisTaskManager {
           pdb: task.metadata.pdb,
           uniprot: task.metadata.uniprot,
           paperTitle: task.metadata.paperTitle,
+          gene: task.metadata.gene,
+          proteinName: task.metadata.proteinName,
         },
       );
 
