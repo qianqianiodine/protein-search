@@ -16,6 +16,14 @@ const HIGHLIGHT_CSS = `
 .hl-crystallization { background: #EFEAF5; padding: 1px 3px; border-radius: 6px; }
 `;
 
+/** 各级标题样式：小标题（h3）加粗且字号大一级，二级标题（h4）加粗 */
+const HEADING_CSS = `
+.md-content h3 { font-size: 1.15em; font-weight: 700; margin: 1em 0 0.4em; color: var(--color-text); }
+.md-content h4 { font-size: 1em; font-weight: 700; margin: 0.8em 0 0.3em; color: var(--color-text); }
+.md-content h2 { font-size: 1.2em; font-weight: 700; margin: 1.2em 0 0.5em; color: var(--color-text); }
+.md-content strong { font-weight: 700; }
+`;
+
 /** 正则兜底模式 — 匹配标准实验数值并用 ** 包裹 */
 const FALLBACK_PATTERNS: Array<[RegExp, string]> = [
   // 温度: 4°C, 37°C, 100 K
@@ -65,8 +73,8 @@ export function renderMarkdown(md: string, section?: string): string {
     },
   );
 
-  // 4. 注入颜色 CSS
-  return `<style>${HIGHLIGHT_CSS}</style>${html}`;
+  // 4. 注入颜色 CSS + 标题样式
+  return `<style>${HIGHLIGHT_CSS}${HEADING_CSS}</style>${html}`;
 }
 
 /** 移除 Markdown 标记，返回纯文本（用于 Excel 导出） */

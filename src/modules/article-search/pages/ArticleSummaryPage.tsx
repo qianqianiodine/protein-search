@@ -336,7 +336,7 @@ export function ArticleSummaryPage() {
                       return (
                         <td key={col.key} style={{ ...tdStyle, cursor: fullText && !isExpanded ? 'pointer' : 'default' }} onClick={() => { if (fullText && !isExpanded) toggleCell(ck); }}>
                           {isExpanded ? (
-                            <div dangerouslySetInnerHTML={{ __html: renderMarkdown(fullText, col.key) }} />
+                            <div className="md-content" dangerouslySetInnerHTML={{ __html: renderMarkdown(fullText, col.key) }} />
                           ) : (
                             <div style={summaryStyle}>
                               {getSummary(entry, col)}

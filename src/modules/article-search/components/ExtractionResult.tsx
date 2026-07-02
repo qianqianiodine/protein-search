@@ -68,6 +68,7 @@ function SectionBlock({ title, content, sectionKey }: { title: string; content: 
       <div style={titleStyle}>{title}</div>
       <div
         ref={ref}
+        className="md-content"
         contentEditable
         suppressContentEditableWarning
         style={contentStyle}
