@@ -44,6 +44,18 @@ export function PdfUploader({ onUpload, disabled }: PdfUploaderProps) {
     }
   };
 
+  const handleRemoveMain = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setMainFile(null);
+    if (mainRef.current) mainRef.current.value = '';
+  };
+
+  const handleRemoveSupp = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSuppFile(null);
+    if (suppRef.current) suppRef.current.value = '';
+  };
+
   const handleSubmit = () => {
     if ((mainFile || suppFile) && !disabled) {
       onUpload(mainFile, suppFile);
@@ -105,6 +117,18 @@ export function PdfUploader({ onUpload, disabled }: PdfUploaderProps) {
     lineHeight: 1.2,
   };
 
+  const removeBtn: React.CSSProperties = {
+    marginLeft: 8,
+    cursor: 'pointer',
+    color: 'var(--color-text-muted)',
+    fontSize: '14px',
+    fontWeight: 700,
+    lineHeight: 1,
+    padding: '0 4px',
+    border: 'none',
+    background: 'none',
+  };
+
   return (
     <div>
       {/* 正文文件 */}
@@ -125,6 +149,7 @@ export function PdfUploader({ onUpload, disabled }: PdfUploaderProps) {
         ) : mainFile ? (
           <span style={{ color: 'var(--color-text)', fontSize: 'var(--text-sm)' }}>
             📄 {mainFile.name} ({(mainFile.size / 1024 / 1024).toFixed(1)} MB)
+            <button style={removeBtn} onClick={handleRemoveMain} title="移除文件">✕</button>
           </span>
         ) : (
           <span style={{ color: 'var(--color-text-secondary)', fontSize: 'var(--text-sm)' }}>
@@ -162,6 +187,7 @@ export function PdfUploader({ onUpload, disabled }: PdfUploaderProps) {
         ) : suppFile ? (
           <span style={{ color: 'var(--color-text)', fontSize: 'var(--text-sm)' }}>
             📎 {suppFile.name} ({(suppFile.size / 1024 / 1024).toFixed(1)} MB)
+            <button style={removeBtn} onClick={handleRemoveSupp} title="移除文件">✕</button>
           </span>
         ) : (
           <span style={{ color: 'var(--color-text-muted)', fontSize: 'var(--text-sm)' }}>
