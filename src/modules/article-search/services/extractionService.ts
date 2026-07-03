@@ -32,10 +32,15 @@ export async function extractPdf(
     formData.append('protein_name', metadata.proteinName);
   }
 
+  const timeoutAbort = AbortSignal.timeout(180_000);
+  const combinedSignal = signal
+    ? AbortSignal.any([signal, timeoutAbort])
+    : timeoutAbort;
+
   const response = await fetch(`${API_BASE}/extract`, {
     method: 'POST',
     body: formData,
-    signal,
+    signal: combinedSignal,
   });
 
   if (!response.ok) {
