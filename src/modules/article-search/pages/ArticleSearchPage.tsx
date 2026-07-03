@@ -133,7 +133,7 @@ export function ArticleSearchPage() {
   }, [doi, uniprot]);
 
   const handleUpload = useCallback(
-    (mainPdf: File, suppPdf?: File | null) => {
+    (mainPdf: File | null, suppPdf?: File | null) => {
       setPhase('extracting');
       setError(null);
       setExtractedFromCache(false);

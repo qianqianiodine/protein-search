@@ -3,13 +3,15 @@ import type { ArticleExtraction } from '../../shared/types';
 const API_BASE = '/api';
 
 export async function extractPdf(
-  mainPdf: File,
+  mainPdf: File | null,
   suppPdf?: File | null,
   signal?: AbortSignal,
   metadata?: { doi?: string; pdb?: string; uniprot?: string; paperTitle?: string; gene?: string; proteinName?: string },
 ): Promise<ArticleExtraction> {
   const formData = new FormData();
-  formData.append('pdf', mainPdf);
+  if (mainPdf) {
+    formData.append('pdf', mainPdf);
+  }
   if (suppPdf) {
     formData.append('supp_pdf', suppPdf);
   }

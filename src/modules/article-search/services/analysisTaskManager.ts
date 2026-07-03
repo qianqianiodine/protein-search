@@ -37,7 +37,7 @@ class AnalysisTaskManager {
   /** 启动新任务（有 DOI 时自动去重；无 DOI 时不去重——不同论文可能同 uniprot，由页面 useEffect 负责重连） */
   startTask(
     metadata: TaskMetadata,
-    mainPdf: File,
+    mainPdf: File | null,
     suppPdf?: File | null,
   ): string {
     // 去重：仅当有 DOI 时（能唯一标识一篇论文），同 doi+uniprot 的 running 任务复用
@@ -137,7 +137,7 @@ class AnalysisTaskManager {
 
   private async executeTask(
     task: AnalysisTask,
-    mainPdf: File,
+    mainPdf: File | null,
     suppPdf?: File | null,
   ): Promise<void> {
     try {
