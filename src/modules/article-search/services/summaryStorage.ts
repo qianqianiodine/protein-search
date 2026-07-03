@@ -17,9 +17,9 @@ export function saveSummary(entries: SummaryEntry[]): void {
 
 export function addToSummary(entry: SummaryEntry): void {
   const entries = loadSummary();
-  // 去重：同 doi + uniprot 不重复添加
-  // 无 DOI 时（手动提交）额外用 gene + title 去重，避免不同文献被误判为重复
-  const exists = entries.some((e) => {
+  // 去重：同 doi + uniprot 覆盖旧条目（确保重新提取后带 summaries 的结果能更新旧数据）
+  // 无 DOI 时（手动提交）额外用 gene + title 去重
+  const idx = entries.findIndex((e) => {
     if (e.doi === entry.doi && e.uniprot === entry.uniprot) {
       if (entry.doi) return true;               // 有 DOI → 同 doi+uniprot 即为重复
       // 无 DOI → 额外检查 gene 和 title，避免拦截同一蛋白的不同手动文献
@@ -27,10 +27,12 @@ export function addToSummary(entry: SummaryEntry): void {
     }
     return false;
   });
-  if (!exists) {
+  if (idx !== -1) {
+    entries[idx] = entry;  // 覆盖旧条目（可能缺少 summaries）
+  } else {
     entries.push(entry);
-    saveSummary(entries);
   }
+  saveSummary(entries);
 }
 
 export function removeFromSummary(id: string): void {

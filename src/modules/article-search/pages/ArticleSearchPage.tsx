@@ -28,14 +28,16 @@ export function ArticleSearchPage() {
   const paperTitle = searchParams.get('title') || '';
   const extractionId = searchParams.get('extractionId') || '';
 
-  // 页面加载时检查缓存：优先 extractionId，其次 doi+uniprot（无 doi → 新提交不查缓存）
-  // extractionId 查不到时，兜底用 uniprot+gene 模糊匹配（修复无 DOI 手动上传从汇总页跳回详情页找不到缓存的问题）
+  // 页面加载时检查缓存
+  // 1) extractionId → 2) doi+uniprot → 3) uniprot+gene（无 DOI 兜底）
   const cached = extractionId
     ? (loadArticleExtractionById(extractionId) ||
        (uniprot ? findExtractionByProtein(uniprot, gene) : null))
     : doi && uniprot
       ? loadArticleExtraction(doi, uniprot)
-      : null;
+      : uniprot
+        ? findExtractionByProtein(uniprot, gene)
+        : null;
   const [phase, setPhase] = useState<Phase>(cached ? 'done' : 'idle');
   const [extraction, setExtraction] = useState<ArticleExtraction | null>(
     cached?.extraction || null,
@@ -47,14 +49,15 @@ export function ArticleSearchPage() {
 
   // Bug③修复：当 doi/uniprot 变化时（如同页面从通知跳转到不同文献），重置所有状态
   useEffect(() => {
-    // 先按 extractionId 查找，再按 doi+uniprot 查找（无 doi → 新提交，不查缓存）
-    // extractionId 查不到时，兜底用 uniprot+gene 模糊匹配
+    // 缓存查找：extractionId → doi+uniprot → uniprot+gene（无 DOI 兜底）
     const newCached = extractionId
       ? (loadArticleExtractionById(extractionId) ||
          (uniprot ? findExtractionByProtein(uniprot, gene) : null))
       : doi && uniprot
         ? loadArticleExtraction(doi, uniprot)
-        : null;
+        : uniprot
+          ? findExtractionByProtein(uniprot, gene)
+          : null;
     if (newCached) {
       setExtraction(newCached.extraction);
       setPhase('done');
@@ -62,11 +65,17 @@ export function ArticleSearchPage() {
       setAdded(isInSummary(doi, uniprot));
       setError(null);
     } else {
-      const existingTask = extractionId
+      // 运行中/已完成任务查找：extractionId → doi+uniprot → 遍历全部任务（修复 extractionId 与 taskId 不一致、无 DOI 时跳过查找的问题）
+      let existingTask = extractionId
         ? analysisTaskManager.getTask(extractionId)
-        : doi && uniprot
-          ? analysisTaskManager.getTaskByMetadata(doi, uniprot)
-          : undefined;
+        : undefined;
+      if (!existingTask && doi && uniprot) {
+        existingTask = analysisTaskManager.getTaskByMetadata(doi, uniprot);
+      }
+      if (!existingTask && uniprot) {
+        // 无 DOI 或 extractionId 未匹配：遍历全部任务找同 uniprot 的（包括 doi 为空的情况）
+        existingTask = analysisTaskManager.findTaskByUniprot(uniprot);
+      }
       if (existingTask?.status === 'completed' && existingTask.extraction) {
         setExtraction(existingTask.extraction);
         setPhase('done');

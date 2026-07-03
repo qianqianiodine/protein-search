@@ -103,6 +103,19 @@ class AnalysisTaskManager {
     return undefined;
   }
 
+  /** 按 uniprot 查找任务（无 DOI 场景兜底），返回最新匹配 */
+  findTaskByUniprot(uniprot: string): AnalysisTask | undefined {
+    let best: AnalysisTask | undefined;
+    for (const task of this.tasks.values()) {
+      if (task.metadata.uniprot === uniprot) {
+        if (!best || task.createdAt > best.createdAt) {
+          best = task;
+        }
+      }
+    }
+    return best;
+  }
+
   /** 获取所有已完成任务 */
   getCompletedTasks(): AnalysisTask[] {
     return [...this.tasks.values()].filter((t) => t.status === 'completed');
