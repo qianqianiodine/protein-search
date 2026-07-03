@@ -15,18 +15,18 @@ export function saveSummary(entries: SummaryEntry[]): void {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
 }
 
+/** 判断两个条目是否匹配（与 addToSummary 去重逻辑一致） */
+function isSameEntry(a: { doi: string; uniprot: string; gene?: string; title?: string }, b: SummaryEntry): boolean {
+  if (a.doi !== b.doi) return false;
+  if (a.uniprot !== b.uniprot) return false;
+  if (a.doi) return true;  // 有 DOI → 同 doi+uniprot 即为同一篇
+  // 无 DOI → 额外检查 gene 和 title
+  return a.gene === b.gene && a.title === b.title;
+}
+
 export function addToSummary(entry: SummaryEntry): void {
   const entries = loadSummary();
-  // 去重：同 doi + uniprot 覆盖旧条目（确保重新提取后带 summaries 的结果能更新旧数据）
-  // 无 DOI 时（手动提交）额外用 gene + title 去重
-  const idx = entries.findIndex((e) => {
-    if (e.doi === entry.doi && e.uniprot === entry.uniprot) {
-      if (entry.doi) return true;               // 有 DOI → 同 doi+uniprot 即为重复
-      // 无 DOI → 额外检查 gene 和 title，避免拦截同一蛋白的不同手动文献
-      return e.gene === entry.gene && e.title === entry.title;
-    }
-    return false;
-  });
+  const idx = entries.findIndex((e) => isSameEntry(entry, e));
   if (idx !== -1) {
     entries[idx] = entry;  // 覆盖旧条目（可能缺少 summaries）
   } else {
@@ -40,6 +40,16 @@ export function removeFromSummary(id: string): void {
   saveSummary(entries);
 }
 
-export function isInSummary(doi: string, uniprot: string): boolean {
-  return loadSummary().some((e) => e.doi === doi && e.uniprot === uniprot);
+/** 检查是否已加入汇总。无 DOI 时需传 gene + title 精确匹配（同蛋白可能有不同文献） */
+export function isInSummary(doi: string, uniprot: string, gene?: string, title?: string): boolean {
+  return loadSummary().some((e) =>
+    isSameEntry({ doi, uniprot, gene, title }, e),
+  );
+}
+
+/** 在汇总中查找匹配条目（用于移除时获取正确 id），匹配逻辑与 addToSummary 一致 */
+export function findSummaryEntry(doi: string, uniprot: string, gene?: string, title?: string): SummaryEntry | undefined {
+  return loadSummary().find((e) =>
+    isSameEntry({ doi, uniprot, gene, title }, e),
+  );
 }

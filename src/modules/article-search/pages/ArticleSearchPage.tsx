@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { analysisTaskManager } from '../services/analysisTaskManager';
 import { clearPendingPdfs } from '../services/pdfFileCache';
-import { addToSummary, isInSummary, removeFromSummary, loadSummary } from '../services/summaryStorage';
+import { addToSummary, isInSummary, removeFromSummary, findSummaryEntry } from '../services/summaryStorage';
 import {
   loadArticleExtraction,
   loadArticleExtractionById,
@@ -43,7 +43,7 @@ export function ArticleSearchPage() {
   );
   const [extractedFromCache, setExtractedFromCache] = useState(!!cached);
   const [error, setError] = useState<string | null>(null);
-  const [added, setAdded] = useState(() => isInSummary(doi, uniprot));
+  const [added, setAdded] = useState(() => isInSummary(doi, uniprot, gene, paperTitle));
   const activeTaskIdRef = useRef<string | null>(null);
 
   // Bug③修复：当 doi/uniprot 变化时（如同页面从通知跳转到不同文献），重置所有状态
@@ -60,7 +60,7 @@ export function ArticleSearchPage() {
       setExtraction(newCached.extraction);
       setPhase('done');
       setExtractedFromCache(true);
-      setAdded(isInSummary(doi, uniprot));
+      setAdded(isInSummary(doi, uniprot, gene, paperTitle));
       setError(null);
     } else {
       // 运行中/已完成任务查找：extractionId → doi+uniprot
@@ -75,7 +75,7 @@ export function ArticleSearchPage() {
         setExtraction(existingTask.extraction);
         setPhase('done');
         setExtractedFromCache(false);
-        setAdded(isInSummary(doi, uniprot));
+        setAdded(isInSummary(doi, uniprot, gene, paperTitle));
         setError(null);
       } else if (existingTask?.status === 'running') {
         setExtraction(null);
@@ -119,7 +119,7 @@ export function ArticleSearchPage() {
       if (task.status === 'completed' && task.extraction) {
         setExtraction(task.extraction);
         setPhase('done');
-        setAdded(isInSummary(doi, uniprot));
+        setAdded(isInSummary(doi, uniprot, gene, paperTitle || task.extraction.paperTitle));
         clearPendingPdfs();
         setExtractedFromCache(false);
         activeTaskIdRef.current = null;
@@ -151,9 +151,8 @@ export function ArticleSearchPage() {
   const handleToggleSummary = () => {
     if (!extraction) return;
     if (added) {
-      // 从汇总中移除
-      const entries = loadSummary();
-      const entry = entries.find((e) => e.doi === doi && e.uniprot === uniprot);
+      // 从汇总中移除：用与 addToSummary 一致的匹配逻辑查找条目
+      const entry = findSummaryEntry(doi, uniprot, gene, paperTitle || extraction.paperTitle);
       if (entry) {
         removeFromSummary(entry.id);
       }

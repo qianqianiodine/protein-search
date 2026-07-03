@@ -34,20 +34,22 @@ class AnalysisTaskManager {
   private tasks = new Map<string, AnalysisTask>();
   private subscribers = new Set<Subscriber>();
 
-  /** 启动新任务（自动去重：同 doi+uniprot 已有 running 任务则复用） */
+  /** 启动新任务（有 DOI 时自动去重；无 DOI 时不去重——不同论文可能同 uniprot，由页面 useEffect 负责重连） */
   startTask(
     metadata: TaskMetadata,
     mainPdf: File,
     suppPdf?: File | null,
   ): string {
-    // 去重
-    for (const existing of this.tasks.values()) {
-      if (
-        existing.status === 'running' &&
-        existing.metadata.doi === metadata.doi &&
-        existing.metadata.uniprot === metadata.uniprot
-      ) {
-        return existing.id;
+    // 去重：仅当有 DOI 时（能唯一标识一篇论文），同 doi+uniprot 的 running 任务复用
+    if (metadata.doi) {
+      for (const existing of this.tasks.values()) {
+        if (
+          existing.status === 'running' &&
+          existing.metadata.doi === metadata.doi &&
+          existing.metadata.uniprot === metadata.uniprot
+        ) {
+          return existing.id;
+        }
       }
     }
 
