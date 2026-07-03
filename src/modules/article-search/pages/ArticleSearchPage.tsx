@@ -63,17 +63,14 @@ export function ArticleSearchPage() {
       setAdded(isInSummary(doi, uniprot, gene, paperTitle));
       setError(null);
     } else {
-      // 任务查找（三级兜底）：extractionId → doi+uniprot → uniprot
-      let existingTask: ReturnType<typeof analysisTaskManager.getTask> = undefined;
-      if (extractionId) {
-        existingTask = analysisTaskManager.getTask(extractionId);
-      }
-      if (!existingTask && doi && uniprot) {
-        existingTask = analysisTaskManager.getTaskByMetadata(doi, uniprot);
-      }
-      if (!existingTask && uniprot) {
-        existingTask = analysisTaskManager.findTaskByUniprot(uniprot);
-      }
+      // 任务查找：extractionId → doi+uniprot
+      // 无 extractionId 且无 DOI 时不查找（手动上传，用户要的是全新提交）
+      let existingTask = extractionId
+        ? (analysisTaskManager.getTask(extractionId) ||
+           (uniprot ? analysisTaskManager.findTaskByUniprot(uniprot) : undefined))
+        : doi && uniprot
+          ? analysisTaskManager.getTaskByMetadata(doi, uniprot)
+          : undefined;
       if (existingTask?.status === 'completed' && existingTask.extraction) {
         setExtraction(existingTask.extraction);
         setPhase('done');
