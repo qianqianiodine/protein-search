@@ -45,6 +45,7 @@ export function ProteinSearchPage() {
   const uniprotAbortRef = useRef<AbortController | null>(null);
   const pdbAbortRef = useRef<AbortController | null>(null);
   const searchCardRef = useRef<HTMLDivElement>(null);
+  const isRestoringRef = useRef(false);
 
   useEffect(() => { setHistory(loadHistory()); }, []);
 
@@ -54,12 +55,24 @@ export function ProteinSearchPage() {
   useEffect(() => {
     const saved = restoreProteinSearchState();
     if (saved?.selectedProtein && saved.pdbResults.length > 0 && !_hasStaleCache(saved.pdbResults)) {
+      isRestoringRef.current = true;
       setSelectedProtein(saved.selectedProtein);
       setStructures(saved.pdbResults);
       setPhase('results');
-      restoreScrollPosition(saved.scrollPosition);
+      // 滚动恢复推迟到第二个 effect（等 DOM 渲染完表格）
     }
   }, []);
+
+  // 恢复场景：等 DOM 渲染完表格后再恢复滚动位置
+  useEffect(() => {
+    if (!isRestoringRef.current) return;
+    if (phase !== 'results' || structures.length === 0) return;
+    const saved = restoreProteinSearchState();
+    if (saved?.scrollPosition) {
+      restoreScrollPosition(saved.scrollPosition);
+    }
+    isRestoringRef.current = false;
+  }, [phase, structures.length]);
 
   const handleSearch = useCallback(async (query: string, taxId: number) => {
     uniprotAbortRef.current?.abort();

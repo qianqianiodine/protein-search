@@ -1,8 +1,9 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import ExcelJS from 'exceljs';
 import { loadSummary, removeFromSummary } from '../services/summaryStorage';
 import { renderMarkdown, stripMarkdown } from '../../shared/utils/markdown';
+import { saveScrollPosition, restoreScrollPosition } from '../../shared/services/scrollPosition';
 import type { ArticleExtraction, SummaryEntry } from '../../shared/types';
 
 const EXCEL_FONT_COLORS: Record<string, string> = {
@@ -83,6 +84,12 @@ export function ArticleSummaryPage() {
 
   const allEntries = loadSummary();
   const proteinGroups = useMemo(() => buildProteinGroups(allEntries), [allEntries]);
+
+  // 滚动位置恢复
+  const SCROLL_KEY = 'article-summary';
+  useEffect(() => {
+    restoreScrollPosition(SCROLL_KEY);
+  }, []);
 
   // 复合键匹配：uniprot || gene，与 buildProteinGroups 一致
   const initialKey = initialUniprot || initialGene || '';
@@ -188,6 +195,7 @@ export function ArticleSummaryPage() {
     if (entry.proteinName) params.set('proteinName', entry.proteinName);
     if (entry.gene) params.set('gene', entry.gene);
     if (entry.title) params.set('title', entry.title);
+    saveScrollPosition(SCROLL_KEY);
     navigate(`/article-search?${params.toString()}`);
   };
   const iconSpan: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2em', lineHeight: 1, flexShrink: 0 };
@@ -334,7 +342,16 @@ export function ArticleSummaryPage() {
                       const fullText = entry.extraction[col.key];
                       const hasSummary = !!entry.extraction.summaries?.[col.key];
                       return (
-                        <td key={col.key} style={{ ...tdStyle, cursor: fullText && !isExpanded ? 'pointer' : 'default' }} onClick={() => { if (fullText && !isExpanded) toggleCell(ck); }}>
+                        <td
+                          key={col.key}
+                          style={{ ...tdStyle, cursor: fullText && !isExpanded ? 'pointer' : 'default' }}
+                          onClick={(e) => {
+                            if (!fullText) return;
+                            if (!isExpanded) { toggleCell(ck); return; }
+                            // 展开状态：只点格子空白才收起，点内容区域不处理（允许复制/选择）
+                            if (e.target === e.currentTarget) toggleCell(ck);
+                          }}
+                        >
                           {isExpanded ? (
                             <div className="md-content" dangerouslySetInnerHTML={{ __html: renderMarkdown(fullText, col.key) }} />
                           ) : (
