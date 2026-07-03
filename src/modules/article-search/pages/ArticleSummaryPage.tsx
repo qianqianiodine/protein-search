@@ -344,12 +344,13 @@ export function ArticleSummaryPage() {
                       return (
                         <td
                           key={col.key}
-                          style={{ ...tdStyle, cursor: fullText && !isExpanded ? 'pointer' : 'default' }}
-                          onClick={(e) => {
+                          style={{ ...tdStyle, cursor: fullText ? 'pointer' : 'default' }}
+                          onClick={() => {
                             if (!fullText) return;
-                            if (!isExpanded) { toggleCell(ck); return; }
-                            // 展开状态：只点格子空白才收起，点内容区域不处理（允许复制/选择）
-                            if (e.target === e.currentTarget) toggleCell(ck);
+                            // 有选中文本 → 用户正在拖选复制，不触发切换
+                            const sel = window.getSelection();
+                            if (sel && sel.toString().length > 0) return;
+                            toggleCell(ck);
                           }}
                         >
                           {isExpanded ? (
@@ -363,10 +364,7 @@ export function ArticleSummaryPage() {
                             </div>
                           )}
                           {isExpanded && (
-                            <span
-                              style={{ color: 'var(--color-primary)', fontSize: 'var(--text-xs)', marginTop: 4, display: 'inline-block', cursor: 'pointer' }}
-                              onClick={(e) => { e.stopPropagation(); toggleCell(ck); }}
-                            >收起</span>
+                            <span style={{ color: 'var(--color-primary)', fontSize: 'var(--text-xs)', marginTop: 4, display: 'inline-block' }}>收起</span>
                           )}
                         </td>
                       );
