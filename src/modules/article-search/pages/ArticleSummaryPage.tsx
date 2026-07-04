@@ -254,7 +254,7 @@ export function ArticleSummaryPage() {
   const summaryStyle: React.CSSProperties = { fontSize: 'var(--text-xs)', color: 'var(--color-text-secondary)', lineHeight: 1.5 };
   const removeBtn: React.CSSProperties = {
     background: 'none', border: 'none', cursor: 'pointer',
-    fontSize: '1.3rem', fontWeight: 300, color: '#d4a0a0', lineHeight: 1,
+    fontSize: '1.3rem', fontWeight: 700, color: '#d4a0a0', lineHeight: 1,
     padding: '2px 4px', borderRadius: 'var(--radius-sm)',
     display: 'block', marginBottom: 8,
   };
@@ -262,7 +262,8 @@ export function ArticleSummaryPage() {
     const pinned = pinnedIds.has(id);
     return {
       background: 'none', border: 'none', cursor: 'pointer',
-      fontSize: '1.2rem', lineHeight: 1,
+      fontSize: pinned ? '1.2rem' : '1.35rem',
+      fontWeight: pinned ? 400 : 600, lineHeight: 1,
       color: pinned ? '#f0b400' : '#d4b868',
       padding: '2px 4px', borderRadius: 'var(--radius-sm)',
       display: 'block', marginBottom: 8,
