@@ -82,6 +82,15 @@ export function ArticleSummaryPage() {
   const initialUniprot = searchParams.get('uniprot') || '';
   const initialGene = searchParams.get('gene') || '';
 
+  const PINNED_KEY = 'article-summary-pinned';
+
+  const [pinnedIds, setPinnedIds] = useState<Set<string>>(() => {
+    try {
+      const raw = localStorage.getItem(PINNED_KEY);
+      return raw ? new Set(JSON.parse(raw)) : new Set();
+    } catch { return new Set(); }
+  });
+
   const allEntries = loadSummary();
   const proteinGroups = useMemo(() => buildProteinGroups(allEntries), [allEntries]);
 
@@ -101,11 +110,15 @@ export function ArticleSummaryPage() {
 
   const entries = useMemo(() => {
     if (!selectedKey || selectedKey === '__unknown__') return [];
-    return allEntries.filter((e) => {
+    const filtered = allEntries.filter((e) => {
       const entryKey = e.uniprot || e.gene || '__unknown__';
       return entryKey === selectedKey;
     });
-  }, [allEntries, selectedKey]);
+    // 置顶的排前面
+    const pinned = filtered.filter((e) => pinnedIds.has(e.id));
+    const unpinned = filtered.filter((e) => !pinnedIds.has(e.id));
+    return [...pinned, ...unpinned];
+  }, [allEntries, selectedKey, pinnedIds]);
 
   const selectedProtein = proteinGroups.find((p) => p.key === selectedKey);
 
@@ -116,6 +129,16 @@ export function ArticleSummaryPage() {
   const handleRemove = (id: string) => {
     removeFromSummary(id);
     refresh();
+  };
+
+  const togglePin = (id: string) => {
+    setPinnedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      localStorage.setItem(PINNED_KEY, JSON.stringify([...next]));
+      return next;
+    });
   };
 
   const toggleCell = (id: string) => {
@@ -230,6 +253,7 @@ export function ArticleSummaryPage() {
   const tdStyle: React.CSSProperties = { padding: 'var(--space-md)', fontSize: 'var(--text-xs)', lineHeight: 1.6, color: 'var(--color-text)', borderBottom: '1px solid var(--color-border)', verticalAlign: 'top', maxWidth: 300 };
   const summaryStyle: React.CSSProperties = { fontSize: 'var(--text-xs)', color: 'var(--color-text-secondary)', lineHeight: 1.5 };
   const removeBtn: React.CSSProperties = { padding: '2px 8px', fontSize: 'var(--text-xs)', color: 'var(--color-danger)', background: 'transparent', border: '1px solid var(--color-danger)', borderRadius: 'var(--radius-sm)', cursor: 'pointer' };
+  const pinBtn: React.CSSProperties = { padding: '2px 8px', fontSize: 'var(--text-xs)', color: 'var(--color-primary)', background: 'transparent', border: '1px solid var(--color-primary)', borderRadius: 'var(--radius-sm)', cursor: 'pointer', marginBottom: 4, display: 'block' };
   const btnSecondary: React.CSSProperties = { padding: 'calc(var(--space-sm) * 0.7) calc(var(--space-lg) * 0.8)', fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--color-text)', background: 'var(--color-surface)', border: '2px solid var(--color-border)', borderRadius: 6, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.3em', lineHeight: 1.2 };
 
   const activeProteinCard: React.CSSProperties = {
@@ -370,6 +394,9 @@ export function ArticleSummaryPage() {
                       );
                     })}
                     <td style={tdStyle}>
+                      <button style={pinBtn} onClick={() => togglePin(entry.id)}>
+                        {pinnedIds.has(entry.id) ? '📌 取消置顶' : '📌 置顶'}
+                      </button>
                       <button style={removeBtn} onClick={() => handleRemove(entry.id)}>移除</button>
                     </td>
                   </tr>

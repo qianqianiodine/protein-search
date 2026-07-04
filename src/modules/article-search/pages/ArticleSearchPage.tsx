@@ -22,6 +22,7 @@ export function ArticleSearchPage() {
   const pdbRaw = searchParams.get('pdb') || '';
   const pdb = pdbRaw; // 保持原始字符串用于存储（可能逗号分隔多个 ID）
   const pdbIds = pdbRaw ? pdbRaw.split(',').filter(Boolean) : [];
+  const hasPdb = !!(doi || pdbIds.length > 0);
   const uniprot = searchParams.get('uniprot') || '';
   const proteinName = searchParams.get('proteinName') || '';
   const gene = searchParams.get('gene') || '';
@@ -44,6 +45,7 @@ export function ArticleSearchPage() {
   const [extractedFromCache, setExtractedFromCache] = useState(!!cached);
   const [error, setError] = useState<string | null>(null);
   const [added, setAdded] = useState(() => isInSummary(doi, uniprot, gene, paperTitle));
+  const [pastedTitle, setPastedTitle] = useState(paperTitle || '');
   const activeTaskIdRef = useRef<string | null>(null);
 
   // Bug③修复：当 doi/uniprot 变化时（如同页面从通知跳转到不同文献），重置所有状态
@@ -146,6 +148,23 @@ export function ArticleSearchPage() {
       activeTaskIdRef.current = taskId;
     },
     [doi, pdb, uniprot, proteinName, gene, paperTitle],
+  );
+
+  const handleSubmitText = useCallback(
+    (mainText: string, suppText?: string) => {
+      setPhase('extracting');
+      setError(null);
+      setExtractedFromCache(false);
+      const effectiveTitle = hasPdb ? paperTitle : pastedTitle;
+      const taskId = analysisTaskManager.startTask(
+        { doi, pdb, uniprot, proteinName, gene, paperTitle: effectiveTitle },
+        null,
+        null,
+        { text: mainText, suppText: suppText || '' },
+      );
+      activeTaskIdRef.current = taskId;
+    },
+    [doi, pdb, uniprot, proteinName, gene, paperTitle, pastedTitle, hasPdb],
   );
 
   const handleToggleSummary = () => {
@@ -290,7 +309,30 @@ export function ArticleSearchPage() {
       {!extraction && (
         <div style={card}>
           <h2 style={{ fontSize: 'var(--text-base)', fontWeight: 600, marginBottom: 'var(--space-lg)' }}>上传文献</h2>
-          <PdfUploader onUpload={handleUpload} disabled={phase === 'extracting'} />
+          {/* 无 PDB：手动输入论文标题 */}
+          {!hasPdb && (
+            <div style={{ marginBottom: 'var(--space-lg)' }}>
+              <div style={paramLabel}>论文标题</div>
+              <input
+                style={{
+                  width: '100%', padding: 'var(--space-sm) var(--space-md)',
+                  fontSize: 'var(--text-sm)', fontFamily: 'var(--font-mono)',
+                  border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)',
+                  background: 'var(--color-surface)', color: 'var(--color-text)',
+                  boxSizing: 'border-box',
+                }}
+                type="text"
+                placeholder="请输入论文标题（必填）"
+                value={pastedTitle}
+                onChange={(e) => setPastedTitle(e.target.value)}
+              />
+            </div>
+          )}
+          <PdfUploader
+            onUpload={handleUpload}
+            onSubmitText={handleSubmitText}
+            disabled={phase === 'extracting'}
+          />
           {phase === 'extracting' && (
             <div style={{ textAlign: 'center', padding: 'var(--space-xl)', color: 'var(--color-text-secondary)' }}>
               <div>⏳ 正在解析 PDF 并提取信息（可能需要 1-2 分钟）...</div>

@@ -3,16 +3,20 @@ import { savePendingPdf, loadPendingPdf } from '../services/pdfFileCache';
 
 interface PdfUploaderProps {
   onUpload: (mainPdf: File | null, suppPdf?: File | null) => void;
+  onSubmitText: (mainText: string, suppText?: string) => void;
   disabled?: boolean;
 }
 
-export function PdfUploader({ onUpload, disabled }: PdfUploaderProps) {
+export function PdfUploader({ onUpload, onSubmitText, disabled }: PdfUploaderProps) {
   const mainRef = useRef<HTMLInputElement>(null);
   const suppRef = useRef<HTMLInputElement>(null);
   const [mainFile, setMainFile] = useState<File | null>(null);
   const [suppFile, setSuppFile] = useState<File | null>(null);
   const [dragOver, setDragOver] = useState<'main' | 'supp' | null>(null);
   const [restored, setRestored] = useState(false);
+  const [activeTab, setActiveTab] = useState<'file' | 'text'>('file');
+  const [mainText, setMainText] = useState('');
+  const [suppText, setSuppText] = useState('');
 
   // 页面刷新后恢复缓存的文件
   useEffect(() => {
@@ -129,89 +133,156 @@ export function PdfUploader({ onUpload, disabled }: PdfUploaderProps) {
     background: 'none',
   };
 
+  const tabBar: React.CSSProperties = {
+    display: 'flex', gap: 'var(--space-sm)', marginBottom: 'var(--space-lg)',
+  };
+  const tabBase: React.CSSProperties = {
+    padding: 'var(--space-sm) var(--space-lg)', fontSize: 'var(--text-sm)',
+    fontWeight: 600, borderRadius: 'var(--radius-md)', cursor: 'pointer',
+    border: '2px solid var(--color-border)', background: 'var(--color-surface)',
+    color: 'var(--color-text-secondary)', lineHeight: 1.2,
+  };
+  const tabActive: React.CSSProperties = {
+    ...tabBase, borderColor: 'var(--color-primary)', color: 'var(--color-primary)',
+    background: '#E3F0FA',
+  };
+  const textareaStyle: React.CSSProperties = {
+    width: '100%', minHeight: 200, padding: 'var(--space-md)',
+    fontSize: 'var(--text-sm)', fontFamily: 'var(--font-mono)',
+    border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)',
+    resize: 'vertical', background: 'var(--color-surface)',
+    color: 'var(--color-text)', boxSizing: 'border-box',
+  };
+
+  const hasText = mainText.trim().length > 0;
+
   return (
     <div>
-      {/* 正文文件 */}
-      <div style={label}>正文文件（可选）</div>
-      <div
-        style={{
-          ...zoneBase,
-          borderColor: dragOver === 'main' ? 'var(--color-primary)' : 'var(--color-border)',
-          opacity: disabled ? 0.5 : 1,
-        }}
-        {...buildDropHandler('main')}
-        onClick={() => mainRef.current?.click()}
-      >
-        {!restored ? (
-          <span style={{ color: 'var(--color-text-muted)', fontSize: 'var(--text-sm)' }}>
-            恢复中...
-          </span>
-        ) : mainFile ? (
-          <span style={{ color: 'var(--color-text)', fontSize: 'var(--text-sm)' }}>
-            📄 {mainFile.name} ({(mainFile.size / 1024 / 1024).toFixed(1)} MB)
-            <button style={removeBtn} onClick={handleRemoveMain} title="移除文件">✕</button>
-          </span>
-        ) : (
-          <span style={{ color: 'var(--color-text-secondary)', fontSize: 'var(--text-sm)' }}>
-            拖拽 PDF 或 Word 文档到此处或点击选择
-          </span>
-        )}
-        <input
-          ref={mainRef}
-          type="file"
-          accept="application/pdf,.pdf,.doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-          style={{ display: 'none' }}
-          disabled={disabled}
-          onChange={(e) => {
-            const file = e.target.files?.[0];
-            if (file && isAllowedFile(file)) handleMainChange(file);
-          }}
-        />
+      {/* 标签栏 */}
+      <div style={tabBar}>
+        <button
+          style={activeTab === 'file' ? tabActive : tabBase}
+          onClick={() => setActiveTab('file')}
+        >📁 上传文件</button>
+        <button
+          style={activeTab === 'text' ? tabActive : tabBase}
+          onClick={() => setActiveTab('text')}
+        >📝 粘贴文本</button>
       </div>
 
-      {/* 补充材料文件 */}
-      <div style={label}>补充材料文件（可选）</div>
-      <div
-        style={{
-          ...zoneBase,
-          borderColor: dragOver === 'supp' ? 'var(--color-primary)' : 'var(--color-border)',
-          opacity: disabled ? 0.5 : 1,
-        }}
-        {...buildDropHandler('supp')}
-        onClick={() => suppRef.current?.click()}
-      >
-        {!restored ? (
-          <span style={{ color: 'var(--color-text-muted)', fontSize: 'var(--text-sm)' }}>
-            恢复中...
-          </span>
-        ) : suppFile ? (
-          <span style={{ color: 'var(--color-text)', fontSize: 'var(--text-sm)' }}>
-            📎 {suppFile.name} ({(suppFile.size / 1024 / 1024).toFixed(1)} MB)
-            <button style={removeBtn} onClick={handleRemoveSupp} title="移除文件">✕</button>
-          </span>
-        ) : (
-          <span style={{ color: 'var(--color-text-muted)', fontSize: 'var(--text-sm)' }}>
-            如有补充材料，拖拽或点击选择
-          </span>
-        )}
-        <input
-          ref={suppRef}
-          type="file"
-          accept="application/pdf,.pdf,.doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-          style={{ display: 'none' }}
-          disabled={disabled}
-          onChange={(e) => {
-            const file = e.target.files?.[0];
-            if (file && isAllowedFile(file)) handleSuppChange(file);
-          }}
-        />
-      </div>
+      {/* 文件上传区 */}
+      {activeTab === 'file' && (
+        <>
+          <div style={label}>正文文件（可选）</div>
+          <div
+            style={{
+              ...zoneBase,
+              borderColor: dragOver === 'main' ? 'var(--color-primary)' : 'var(--color-border)',
+              opacity: disabled ? 0.5 : 1,
+            }}
+            {...buildDropHandler('main')}
+            onClick={() => mainRef.current?.click()}
+          >
+            {!restored ? (
+              <span style={{ color: 'var(--color-text-muted)', fontSize: 'var(--text-sm)' }}>
+                恢复中...
+              </span>
+            ) : mainFile ? (
+              <span style={{ color: 'var(--color-text)', fontSize: 'var(--text-sm)' }}>
+                📄 {mainFile.name} ({(mainFile.size / 1024 / 1024).toFixed(1)} MB)
+                <button style={removeBtn} onClick={handleRemoveMain} title="移除文件">✕</button>
+              </span>
+            ) : (
+              <span style={{ color: 'var(--color-text-secondary)', fontSize: 'var(--text-sm)' }}>
+                拖拽 PDF 或 Word 文档到此处或点击选择
+              </span>
+            )}
+            <input
+              ref={mainRef}
+              type="file"
+              accept="application/pdf,.pdf,.doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+              style={{ display: 'none' }}
+              disabled={disabled}
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file && isAllowedFile(file)) handleMainChange(file);
+              }}
+            />
+          </div>
+
+          <div style={label}>补充材料文件（可选）</div>
+          <div
+            style={{
+              ...zoneBase,
+              borderColor: dragOver === 'supp' ? 'var(--color-primary)' : 'var(--color-border)',
+              opacity: disabled ? 0.5 : 1,
+            }}
+            {...buildDropHandler('supp')}
+            onClick={() => suppRef.current?.click()}
+          >
+            {!restored ? (
+              <span style={{ color: 'var(--color-text-muted)', fontSize: 'var(--text-sm)' }}>
+                恢复中...
+              </span>
+            ) : suppFile ? (
+              <span style={{ color: 'var(--color-text)', fontSize: 'var(--text-sm)' }}>
+                📎 {suppFile.name} ({(suppFile.size / 1024 / 1024).toFixed(1)} MB)
+                <button style={removeBtn} onClick={handleRemoveSupp} title="移除文件">✕</button>
+              </span>
+            ) : (
+              <span style={{ color: 'var(--color-text-muted)', fontSize: 'var(--text-sm)' }}>
+                如有补充材料，拖拽或点击选择
+              </span>
+            )}
+            <input
+              ref={suppRef}
+              type="file"
+              accept="application/pdf,.pdf,.doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+              style={{ display: 'none' }}
+              disabled={disabled}
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file && isAllowedFile(file)) handleSuppChange(file);
+              }}
+            />
+          </div>
+        </>
+      )}
+
+      {/* 文本粘贴区 */}
+      {activeTab === 'text' && (
+        <>
+          <div style={label}>正文文本</div>
+          <textarea
+            style={textareaStyle}
+            placeholder="粘贴论文正文文本（必填）"
+            value={mainText}
+            onChange={(e) => setMainText(e.target.value)}
+            disabled={disabled}
+          />
+          <div style={{ ...label, marginTop: 'var(--space-md)' }}>补充材料文本（可选）</div>
+          <textarea
+            style={textareaStyle}
+            placeholder="如有补充材料，粘贴在此处"
+            value={suppText}
+            onChange={(e) => setSuppText(e.target.value)}
+            disabled={disabled}
+          />
+        </>
+      )}
 
       {/* 提交按钮 */}
       <button
-        style={submitBtn}
-        disabled={!hasFile || disabled}
-        onClick={handleSubmit}
+        style={{
+          ...submitBtn,
+          background: ((activeTab === 'file' ? hasFile : hasText) && !disabled) ? 'var(--color-primary)' : 'var(--color-text-muted)',
+          cursor: ((activeTab === 'file' ? hasFile : hasText) && !disabled) ? 'pointer' : 'not-allowed',
+        }}
+        disabled={(activeTab === 'file' ? !hasFile : !hasText) || disabled}
+        onClick={() => {
+          if (activeTab === 'file') handleSubmit();
+          else if (hasText && !disabled) onSubmitText(mainText.trim(), suppText.trim() || undefined);
+        }}
       >
         {disabled ? '提取中...' : '提交分析'}
       </button>

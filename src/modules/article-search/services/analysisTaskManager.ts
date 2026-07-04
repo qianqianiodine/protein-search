@@ -24,6 +24,7 @@ export interface AnalysisTask {
   createdAt: number;
   completedAt: number | null;
   controller: AbortController;
+  textInput?: { text?: string; suppText?: string };
 }
 
 type Subscriber = () => void;
@@ -39,6 +40,7 @@ class AnalysisTaskManager {
     metadata: TaskMetadata,
     mainPdf: File | null,
     suppPdf?: File | null,
+    textInput?: { text?: string; suppText?: string },
   ): string {
     // 去重：仅当有 DOI 时（能唯一标识一篇论文），同 doi+uniprot 的 running 任务复用
     if (metadata.doi) {
@@ -65,6 +67,7 @@ class AnalysisTaskManager {
       createdAt: Date.now(),
       completedAt: null,
       controller,
+      textInput,
     };
 
     this.tasks.set(id, task);
@@ -153,6 +156,7 @@ class AnalysisTaskManager {
           gene: task.metadata.gene,
           proteinName: task.metadata.proteinName,
         },
+        task.textInput,
       );
 
       if (task.controller.signal.aborted) return;

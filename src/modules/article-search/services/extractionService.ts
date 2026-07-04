@@ -7,6 +7,7 @@ export async function extractPdf(
   suppPdf?: File | null,
   signal?: AbortSignal,
   metadata?: { doi?: string; pdb?: string; uniprot?: string; paperTitle?: string; gene?: string; proteinName?: string },
+  textInput?: { text?: string; suppText?: string },
 ): Promise<ArticleExtraction> {
   const formData = new FormData();
   if (mainPdf) {
@@ -32,6 +33,12 @@ export async function extractPdf(
   }
   if (metadata?.proteinName) {
     formData.append('protein_name', metadata.proteinName);
+  }
+  if (textInput?.text) {
+    formData.append('text', textInput.text);
+  }
+  if (textInput?.suppText) {
+    formData.append('supp_text', textInput.suppText);
   }
 
   const timeoutAbort = AbortSignal.timeout(180_000);
