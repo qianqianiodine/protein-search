@@ -252,15 +252,20 @@ export function ArticleSummaryPage() {
   const thStyle: React.CSSProperties = { padding: 'var(--space-md)', fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--color-text)', borderBottom: '2px solid var(--color-border)', textAlign: 'left', whiteSpace: 'nowrap' };
   const tdStyle: React.CSSProperties = { padding: 'var(--space-md)', fontSize: 'var(--text-xs)', lineHeight: 1.6, color: 'var(--color-text)', borderBottom: '1px solid var(--color-border)', verticalAlign: 'top', maxWidth: 300 };
   const summaryStyle: React.CSSProperties = { fontSize: 'var(--text-xs)', color: 'var(--color-text-secondary)', lineHeight: 1.5 };
-  const removeBtn: React.CSSProperties = { padding: 0, width: 24, height: 24, fontSize: '14px', lineHeight: '22px', textAlign: 'center', color: 'var(--color-danger)', background: 'transparent', border: '3px solid var(--color-danger)', borderRadius: 'var(--radius-sm)', cursor: 'pointer', marginBottom: 12, display: 'block' };
+  const removeBtn: React.CSSProperties = {
+    background: 'none', border: 'none', cursor: 'pointer',
+    fontSize: '1.3rem', fontWeight: 300, color: '#d4a0a0', lineHeight: 1,
+    padding: '2px 4px', borderRadius: 'var(--radius-sm)',
+    display: 'block', marginBottom: 8,
+  };
   const pinStyle = (id: string): React.CSSProperties => {
     const pinned = pinnedIds.has(id);
     return {
-      padding: 0, width: 24, height: 24, fontSize: '14px', lineHeight: '22px', textAlign: 'center',
-      color: pinned ? '#fff' : 'var(--color-primary)',
-      background: pinned ? 'var(--color-primary)' : 'transparent',
-      border: `3px solid var(--color-primary)`, borderRadius: 'var(--radius-sm)',
-      cursor: 'pointer', marginBottom: 12, display: 'block',
+      background: 'none', border: 'none', cursor: 'pointer',
+      fontSize: '1.2rem', lineHeight: 1,
+      color: pinned ? '#f0b400' : '#d4b868',
+      padding: '2px 4px', borderRadius: 'var(--radius-sm)',
+      display: 'block', marginBottom: 8,
     };
   };
   const btnSecondary: React.CSSProperties = { padding: 'calc(var(--space-sm) * 0.7) calc(var(--space-lg) * 0.8)', fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--color-text)', background: 'var(--color-surface)', border: '2px solid var(--color-border)', borderRadius: 6, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.3em', lineHeight: 1.2 };
@@ -403,8 +408,8 @@ export function ArticleSummaryPage() {
                       );
                     })}
                     <td style={tdStyle}>
-                      <button style={pinStyle(entry.id)} onClick={() => togglePin(entry.id)} title={pinnedIds.has(entry.id) ? '取消置顶' : '置顶'}>📌</button>
-                      <button style={removeBtn} onClick={() => handleRemove(entry.id)} title="移除">✕</button>
+                      <button style={pinStyle(entry.id)} onClick={() => togglePin(entry.id)} title={pinnedIds.has(entry.id) ? '取消置顶' : '置顶'}>{pinnedIds.has(entry.id) ? '⭐' : '☆'}</button>
+                      <button style={removeBtn} onClick={() => handleRemove(entry.id)} title="移除">×</button>
                     </td>
                   </tr>
                 ))}
