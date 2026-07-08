@@ -37,7 +37,9 @@ export function ArticleSearchPage() {
        (uniprot ? findExtractionByProtein(uniprot, gene) : null))
     : doi && uniprot
       ? loadArticleExtraction(doi, uniprot)
-      : null;
+      : uniprot
+        ? findExtractionByProtein(uniprot, gene)
+        : null;
   const [phase, setPhase] = useState<Phase>(cached ? 'done' : 'idle');
   const [extraction, setExtraction] = useState<ArticleExtraction | null>(
     cached?.extraction || null,
@@ -57,7 +59,9 @@ export function ArticleSearchPage() {
          (uniprot ? findExtractionByProtein(uniprot, gene) : null))
       : doi && uniprot
         ? loadArticleExtraction(doi, uniprot)
-        : null;
+        : uniprot
+          ? findExtractionByProtein(uniprot, gene)
+          : null;
     if (newCached) {
       setExtraction(newCached.extraction);
       setPhase('done');
