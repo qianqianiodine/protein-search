@@ -14,7 +14,10 @@
 - **Excel**: xlsx (SheetJS)，OOXML `<si>` 富文本导出
 - **Markdown**: marked 渲染 + 自定义正则数值高亮
 - **存储**: localStorage（历史/缓存/汇总）+ IndexedDB（PDF 文件缓存）
-- **后端**: Python FastAPI (端口 8765)，独立仓库 `D:\vscode_claudecode_related\article-search-backend\`
+- **后端**: Python FastAPI (端口 8765)，已合并到本项目 `backend/` 目录
+- **后端依赖**: `fastapi`, `uvicorn`, `openai`, `python-dotenv`, `PyMuPDF`, `python-docx`, `certifi`
+- **环境变量**: `.env.example`（前端 — VITE_API_BASE_URL）和 `backend/.env.example`（后端 — DEEPSEEK_API_KEY 等）
+- **启动**: `start.bat` (Windows) / `start.sh` (Mac/Linux) — 自动 venv + 依赖安装 + 启动
 - **AI**: DeepSeek API — `deepseek-v4-flash`, temperature 0.1, max_tokens 16384
 - **PDF**: PyMuPDF (fitz) 文本提取
 
