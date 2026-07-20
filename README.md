@@ -112,7 +112,7 @@ DEEPSEEK_MODEL=deepseek-v4-flash
 | GLM（智谱） | [open.bigmodel.cn](https://open.bigmodel.cn/) | ¥0.1-5/百万 token |
 | 豆包（字节） | [console.volcengine.com/ark](https://console.volcengine.com/ark/) | ¥0.8-4/百万 token |
 | OpenAI | [platform.openai.com](https://platform.openai.com) | $2.5-15/百万 token |
-| Together AI | [api.together.ai](https://api.together.ai) | $0.2-3/百万 token |
+| Gemini | [aistudio.google.com](https://aistudio.google.com/) | 免费额度可用 |
 | Ollama（本地） | [ollama.com](https://ollama.com) | 免费 |
 
 > 变量名虽然叫 `DEEPSEEK_`，但因为用的是 OpenAI 兼容协议，换成任何 provider 都能用。只需改 `BASE_URL` 和 `MODEL`。
