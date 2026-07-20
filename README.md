@@ -47,12 +47,6 @@ cd protein-search
 
 ### 第二步：配置大模型 API Key（仅文献分析需要）
 
-```bash
-# 复制配置模板
-copy backend\.env.example backend\.env    # Windows
-# cp backend/.env.example backend/.env    # Mac/Linux
-```
-
 用记事本（或任意编辑器）打开 `backend\.env`，把 `your-api-key-here` 替换成你的真实 API Key。
 
 > 如果你**只使用蛋白搜索功能**，这一步可以跳过。

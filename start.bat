@@ -38,18 +38,18 @@ if %errorlevel% neq 0 (
 echo [检测] Node.js: 已安装
 
 REM === 后端 .env 检查 ===
-if not exist "backend\.env" (
+findstr /c:"your-api-key-here" "backend\.env" >nul 2>&1
+if %errorlevel% equ 0 (
     echo.
-    echo [!!!] 未检测到 backend\.env 文件！
-    echo       请先复制 backend\.env.example 为 backend\.env
-    echo       然后编辑 backend\.env，填入你的大模型 API Key
+    echo [!!!] 检测到 backend\.env 中 API Key 还是默认值！
+    echo       请编辑 backend\.env，把 your-api-key-here 替换成你的真实 API Key
     echo.
-    echo   copy backend\.env.example backend\.env
+    echo   notepad backend\.env
     echo.
     pause
     exit /b 1
 )
-echo [检测] backend\.env: 已配置
+echo [检测] backend\.env: API Key 已配置
 
 REM === 后端虚拟环境 & 依赖 ===
 if not exist "backend\.venv\" (

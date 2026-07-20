@@ -31,17 +31,14 @@ fi
 echo "[检测] Node.js: $(node --version)"
 
 # === 后端 .env 检查 ===
-if [ ! -f "backend/.env" ]; then
+if grep -q "your-api-key-here" "backend/.env" 2>/dev/null; then
     echo ""
-    echo "[!!!] 未检测到 backend/.env 文件！"
-    echo "      请先复制并编辑："
-    echo ""
-    echo "      cp backend/.env.example backend/.env"
-    echo "      # 然后编辑 backend/.env，填入你的大模型 API Key"
+    echo "[!!!] 检测到 backend/.env 中 API Key 还是默认值！"
+    echo "      请编辑 backend/.env，把 your-api-key-here 替换成你的真实 API Key"
     echo ""
     exit 1
 fi
-echo "[检测] backend/.env: 已配置"
+echo "[检测] backend/.env: API Key 已配置"
 
 # === 后端虚拟环境 & 依赖 ===
 if [ ! -d "backend/.venv" ]; then
