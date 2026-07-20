@@ -24,3 +24,8 @@ backend/.venv/
 *.njsproj
 *.sln
 *.sw?
+*.code-workspace
+
+# Claude Code (本地开发工具，不提交)
+.claude/
+CLAUDE.md
