@@ -32,26 +32,47 @@
 
 ## 快速开始
 
-### 一键启动（推荐）
+### 第一步：下载代码
+
+**方式 A — Git 克隆（推荐）：**
 
 ```bash
-# Windows
-start.bat
-
-# Mac / Linux
-bash start.sh
+git clone https://github.com/qianqianiodine/protein-search.git
+cd protein-search
 ```
 
-脚本会自动：检测环境 → 安装依赖 → 启动前后端。首次运行如果没找到 `backend/.env`，会提示你先配置。
+**方式 B — 下载 ZIP：**
 
-### 手动启动
+点击 [GitHub 页面](https://github.com/qianqianiodine/protein-search) 上的绿色 **Code** 按钮 → **Download ZIP** → 解压到你想要的目录 → 进入目录。
+
+### 第二步：配置大模型 API Key（仅文献分析需要）
 
 ```bash
-# 1. 配置 API Key（仅文献分析需要）
-cp backend/.env.example backend/.env
-# 编辑 backend/.env，填入你的 API Key
+# 复制配置模板
+copy backend\.env.example backend\.env    # Windows
+# cp backend/.env.example backend/.env    # Mac/Linux
+```
 
-# 2. 安装 & 启动后端
+用记事本（或任意编辑器）打开 `backend\.env`，把 `your-api-key-here` 替换成你的真实 API Key。
+
+> 如果你**只使用蛋白搜索功能**，这一步可以跳过。
+
+### 第三步：启动
+
+**Windows：** 双击 `start.bat`
+
+**Mac / Linux：** 终端运行 `bash start.sh`
+
+脚本会自动：检测 Python/Node.js → 安装依赖 → 启动后端(:8765)和前端(:5173)。
+
+浏览器打开 `http://localhost:5173` 即可使用。
+
+> 如果脚本报错，也可以参考下面的手动启动方式。
+
+### 手动启动（如果脚本不工作）
+
+```bash
+# 终端 1 — 启动后端
 cd backend
 python -m venv .venv
 .venv\Scripts\pip install -r requirements.txt   # Windows
@@ -59,14 +80,12 @@ python -m venv .venv
 .venv\Scripts\python server.py                   # Windows
 # .venv/bin/python server.py                     # Mac/Linux
 
-# 3. 安装 & 启动前端（新终端）
+# 终端 2 — 启动前端
 npm install
 npm run dev
 ```
 
 浏览器打开 `http://localhost:5173`。
-
-> **蛋白搜索功能不需要后端**，只要前端跑起来就能用 UniProt + PDB 搜索。
 
 ---
 
