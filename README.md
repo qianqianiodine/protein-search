@@ -107,6 +107,10 @@ DEEPSEEK_MODEL=deepseek-v4-flash
 | 提供商 | 获取 Key | 价格参考 |
 |--------|----------|----------|
 | DeepSeek | [platform.deepseek.com](https://platform.deepseek.com) | ¥1/百万 token |
+| 通义千问 Qwen | [dashscope.console.aliyun.com](https://dashscope.console.aliyun.com/) | ¥0.8-2/百万 token |
+| Kimi | [platform.moonshot.cn](https://platform.moonshot.cn/) | ¥1-12/百万 token |
+| GLM（智谱） | [open.bigmodel.cn](https://open.bigmodel.cn/) | ¥0.1-5/百万 token |
+| 豆包（字节） | [console.volcengine.com/ark](https://console.volcengine.com/ark/) | ¥0.8-4/百万 token |
 | OpenAI | [platform.openai.com](https://platform.openai.com) | $2.5-15/百万 token |
 | Together AI | [api.together.ai](https://api.together.ai) | $0.2-3/百万 token |
 | Ollama（本地） | [ollama.com](https://ollama.com) | 免费 |
