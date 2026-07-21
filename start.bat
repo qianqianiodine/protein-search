@@ -74,7 +74,9 @@ if not exist "backend\.venv\" (
     )
 )
 
-echo [安装] 检查后端依赖...
+echo [安装] 升级 pip...
+backend\.venv\Scripts\python -m pip install --upgrade pip -q
+echo [安装] 安装后端依赖...
 backend\.venv\Scripts\pip install -q -r backend\requirements.txt
 if !errorlevel! neq 0 (
     echo [错误] 后端依赖安装失败。

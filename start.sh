@@ -51,7 +51,9 @@ if [ ! -d "backend/.venv" ]; then
     $PYTHON_CMD -m venv backend/.venv
 fi
 
-echo "[安装] 检查后端依赖..."
+echo "[安装] 升级 pip..."
+backend/.venv/bin/python -m pip install --upgrade pip -q
+echo "[安装] 安装后端依赖..."
 backend/.venv/bin/pip install -q -r backend/requirements.txt
 
 # === 前端依赖 ===
