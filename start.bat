@@ -46,15 +46,21 @@ if not exist "backend\.env" (
     pause
     exit /b 1
 )
+:check_env
 findstr /c:"your-api-key-here" "backend\.env" >nul 2>&1
-if !errorlevel! equ 0 (
-    echo.
-    echo [!!!] 检测到 backend\.env 中 API Key 还是默认值！
-    echo       请编辑 backend\.env，把 your-api-key-here 替换成你的真实 API Key
-    echo.
-    pause
-    exit /b 1
-)
+if !errorlevel! neq 0 goto env_ok
+echo.
+echo [!!!] 检测到 backend\.env 中 API Key 还是默认值！
+echo.
+echo       1. 即将打开记事本
+echo       2. 把 your-api-key-here 替换成你的真实 API Key
+echo       3. 保存 (Ctrl+S)，关闭记事本
+echo       4. 回到这个窗口，按任意键继续
+echo.
+pause
+start /wait notepad backend\.env
+goto check_env
+:env_ok
 echo [检测] backend\.env: API Key 已配置
 
 REM === 后端虚拟环境 & 依赖 ===
