@@ -22,7 +22,7 @@ if !errorlevel! equ 0 (
     )
 )
 if "!PYTHON_CMD!"=="" (
-    echo [错误] 未检测到 Python。请安装 Python 3.10+ 并加入 PATH。
+    echo [错误] 未检测到 Python。请安装 Python 3.9+ 并加入 PATH。
     echo        https://www.python.org/downloads/
     pause
     exit /b 1

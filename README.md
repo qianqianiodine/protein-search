@@ -25,7 +25,7 @@
 ## 前提条件
 
 - **Node.js** 18+（[下载](https://nodejs.org/)）
-- **Python** 3.10+（系统自带 / [Conda](https://docs.conda.io/) / 官网安装均可）
+- **Python** 3.9+（系统自带 / [Conda](https://docs.conda.io/) / 官网安装均可）
 - **大模型 API Key**（仅文献分析模块需要，蛋白搜索不需要）
 
 ---
@@ -181,7 +181,7 @@ protein-search/
 ## 常见问题
 
 **Q: 启动脚本运行报错？**
-A: 确认已安装 Node.js 18+ 和 Python 3.10+，且命令 `node` 和 `python`（或 `python3`）在系统 PATH 中。
+A: 确认已安装 Node.js 18+ 和 Python 3.9+，且命令 `node` 和 `python`（或 `python3`）在系统 PATH 中。
 
 **Q: 只做蛋白搜索，需要装后端吗？**
 A: 不需要。蛋白搜索完全在前端运行，直接调用公开 API。启动脚本检测到缺少 Python 也会跳过。

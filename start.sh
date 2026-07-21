@@ -16,7 +16,7 @@ if command -v python3 >/dev/null 2>&1; then
 elif command -v python >/dev/null 2>&1; then
     PYTHON_CMD="python"
 else
-    echo "[错误] 未检测到 Python。请安装 Python 3.10+。"
+    echo "[错误] 未检测到 Python。请安装 Python 3.9+。"
     echo "       https://www.python.org/downloads/"
     exit 1
 fi
