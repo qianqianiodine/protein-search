@@ -1,6 +1,7 @@
 import type { SummaryEntry } from '../../shared/types';
 
 const STORAGE_KEY = 'article-summary-entries';
+const ORDER_KEY = 'article-summary-protein-order';
 
 export function loadSummary(): SummaryEntry[] {
   try {
@@ -13,6 +14,20 @@ export function loadSummary(): SummaryEntry[] {
 
 export function saveSummary(entries: SummaryEntry[]): void {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+}
+
+/** 蛋白卡片显示顺序 */
+export function loadProteinOrder(): string[] {
+  try {
+    const raw = localStorage.getItem(ORDER_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function saveProteinOrder(keys: string[]): void {
+  localStorage.setItem(ORDER_KEY, JSON.stringify(keys));
 }
 
 /** 判断两个条目是否匹配（与 addToSummary 去重逻辑一致） */
@@ -31,6 +46,13 @@ export function addToSummary(entry: SummaryEntry): void {
     entries[idx] = entry;  // 覆盖旧条目（可能缺少 summaries）
   } else {
     entries.push(entry);
+    // 新蛋白 → 加入排序列表末尾
+    const proteinKey = entry.uniprot || entry.gene || '__unknown__';
+    const order = loadProteinOrder();
+    if (!order.includes(proteinKey)) {
+      order.push(proteinKey);
+      saveProteinOrder(order);
+    }
   }
   saveSummary(entries);
 }
