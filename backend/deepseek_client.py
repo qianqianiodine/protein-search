@@ -1,10 +1,12 @@
 """DeepSeek API 客户端 — OpenAI 兼容格式"""
 import os
+from pathlib import Path
 from openai import OpenAI
 from dotenv import load_dotenv
 import httpx
 
-load_dotenv()
+# 始终加载 backend/ 目录下的 .env，不依赖当前工作目录
+load_dotenv(Path(__file__).parent / ".env")
 
 _client = OpenAI(
     api_key=os.getenv("DEEPSEEK_API_KEY"),
