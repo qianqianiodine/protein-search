@@ -1,10 +1,26 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import ExcelJS from 'exceljs';
-import { loadSummary, removeFromSummary } from '../services/summaryStorage';
+import { loadSummary, loadProteinOrder, removeFromSummary, saveProteinOrder, saveSummary } from '../services/summaryStorage';
 import { renderMarkdown, stripMarkdown } from '../../shared/utils/markdown';
 import { saveScrollPosition, restoreScrollPosition } from '../../shared/services/scrollPosition';
 import type { ArticleExtraction, SummaryEntry } from '../../shared/types';
+import {
+  DndContext,
+  PointerSensor,
+  KeyboardSensor,
+  useSensor,
+  useSensors,
+  closestCenter,
+  type DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  useSortable,
+  sortableKeyboardCoordinates,
+  horizontalListSortingStrategy,
+  arrayMove,
+} from '@dnd-kit/sortable';
 
 const EXCEL_FONT_COLORS: Record<string, string> = {
   construct: '4A6A8A',
@@ -76,6 +92,53 @@ function buildProteinGroups(entries: SummaryEntry[]): ProteinGroup[] {
   return [...map.values()];
 }
 
+// ---- 可拖拽蛋白卡片（内联组件） ----
+
+interface SortableProteinCardProps {
+  protein: ProteinGroup;
+  isActive: boolean;
+  onClick: () => void;
+  onContextMenu: (e: React.MouseEvent) => void;
+  activeStyle: React.CSSProperties;
+  inactiveStyle: React.CSSProperties;
+}
+
+function SortableProteinCard({ protein, isActive, onClick, onContextMenu, activeStyle, inactiveStyle }: SortableProteinCardProps) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: protein.key });
+
+  const baseStyle = isActive ? activeStyle : inactiveStyle;
+  const transformStr = transform
+    ? `translate3d(${transform.x}px, ${transform.y}px, 0)`
+    : undefined;
+
+  const style: React.CSSProperties = {
+    ...baseStyle,
+    transform: transformStr,
+    transition,
+    opacity: isDragging ? 0.4 : 1,
+  };
+
+  const handleStyle: React.CSSProperties = {
+    cursor: 'grab',
+    userSelect: 'none' as const,
+    marginRight: 2,
+    fontSize: '1.1em',
+    lineHeight: 1,
+    display: 'inline-flex',
+    alignItems: 'center',
+    touchAction: 'none',
+  };
+
+  return (
+    <button ref={setNodeRef} style={style} onContextMenu={onContextMenu}>
+      <span {...attributes} {...listeners} style={handleStyle} aria-label="拖拽排序">⠿</span>
+      <span onClick={(e) => { e.stopPropagation(); onClick(); }} style={{ cursor: 'pointer' }}>
+        {proteinLabel(protein)} · {protein.count} 篇
+      </span>
+    </button>
+  );
+}
+
 export function ArticleSummaryPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -92,7 +155,21 @@ export function ArticleSummaryPage() {
   });
 
   const allEntries = loadSummary();
-  const proteinGroups = useMemo(() => buildProteinGroups(allEntries), [allEntries]);
+  const [proteinOrder, setProteinOrder] = useState<string[]>(() => loadProteinOrder());
+
+  const proteinGroups = useMemo(() => {
+    const groups = buildProteinGroups(allEntries);
+    // 按保存的顺序排列
+    if (proteinOrder.length > 0) {
+      const orderMap = new Map(proteinOrder.map((k, i) => [k, i]));
+      groups.sort((a, b) => {
+        const ai = orderMap.get(a.key) ?? Infinity;
+        const bi = orderMap.get(b.key) ?? Infinity;
+        return ai - bi;
+      });
+    }
+    return groups;
+  }, [allEntries, proteinOrder]);
 
   // 滚动位置恢复
   const SCROLL_KEY = 'article-summary';
@@ -122,14 +199,99 @@ export function ArticleSummaryPage() {
 
   const selectedProtein = proteinGroups.find((p) => p.key === selectedKey);
 
+  // ---- 拖拽传感器 ----
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+
   const setEntriesRefresh = useState(0)[1];
   const refresh = () => setEntriesRefresh((n) => n + 1);
-  const [expandedCells, setExpandedCells] = useState<Set<string>>(new Set());
 
-  const handleRemove = (id: string) => {
-    removeFromSummary(id);
+  const handleDragEnd = useCallback((event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    // 用当前显示顺序（而非 localStorage 顺序）来找索引，避免首次/新增时 order 不完整
+    const currentKeys = proteinGroups.map((p) => p.key);
+    const oldIndex = currentKeys.indexOf(String(active.id));
+    const newIndex = currentKeys.indexOf(String(over.id));
+    if (oldIndex === -1 || newIndex === -1) return;
+    const newOrder = arrayMove(currentKeys, oldIndex, newIndex);
+    setProteinOrder(newOrder);
+    saveProteinOrder(newOrder);
+  }, [proteinGroups]);
+
+  // ---- 右键菜单 ----
+  interface CtxMenu { x: number; y: number; proteinKey: string; }
+  const [ctxMenu, setCtxMenu] = useState<CtxMenu | null>(null);
+
+  const closeCtxMenu = useCallback(() => setCtxMenu(null), []);
+
+  useEffect(() => {
+    if (!ctxMenu) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') closeCtxMenu(); };
+    document.addEventListener('click', closeCtxMenu);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('click', closeCtxMenu);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [ctxMenu, closeCtxMenu]);
+
+  const handleContextMenu = (e: React.MouseEvent, proteinKey: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setCtxMenu({ x: e.clientX, y: e.clientY, proteinKey });
+  };
+
+  const handleBulkDelete = () => {
+    if (!ctxMenu) return;
+    const protein = proteinGroups.find((p) => p.key === ctxMenu.proteinKey);
+    if (!protein) return;
+    const label = proteinLabel(protein);
+    if (!window.confirm(`确定删除 ${label} 的全部 ${protein.count} 篇文献？不可恢复。`)) return;
+
+    const remaining = allEntries.filter((e) => {
+      const ek = e.uniprot || e.gene || '__unknown__';
+      return ek !== ctxMenu.proteinKey;
+    });
+    saveSummary(remaining);
+
+    const newOrder = proteinOrder.filter((k) => k !== ctxMenu.proteinKey);
+    setProteinOrder(newOrder);
+    saveProteinOrder(newOrder);
+
+    if (selectedKey === ctxMenu.proteinKey) {
+      const groups = buildProteinGroups(remaining);
+      setSelectedKey(groups[0]?.key || '');
+    }
+
+    setCtxMenu(null);
     refresh();
   };
+
+  // ---- 单条删除时清理 order ----
+  const handleRemove = (id: string) => {
+    const entry = allEntries.find((e) => e.id === id);
+    const proteinKey = entry ? (entry.uniprot || entry.gene || '__unknown__') : null;
+    removeFromSummary(id);
+    if (proteinKey) {
+      const remaining = loadSummary();
+      const stillExists = remaining.some((e) => (e.uniprot || e.gene || '__unknown__') === proteinKey);
+      if (!stillExists) {
+        const newOrder = proteinOrder.filter((k) => k !== proteinKey);
+        setProteinOrder(newOrder);
+        saveProteinOrder(newOrder);
+        if (selectedKey === proteinKey) {
+          const groups = buildProteinGroups(remaining);
+          setSelectedKey(groups[0]?.key || '');
+        }
+      }
+    }
+    refresh();
+  };
+
+  const [expandedCells, setExpandedCells] = useState<Set<string>>(new Set());
 
   const togglePin = (id: string) => {
     setPinnedIds((prev) => {
@@ -324,18 +486,27 @@ export function ArticleSummaryPage() {
         </div>
       </header>
 
-      {/* ---- 蛋白选择面板 ---- */}
-      <div style={{ display: 'flex', gap: 'var(--space-md)', overflowX: 'auto', paddingBottom: 'var(--space-md)', marginBottom: 'var(--space-xl)' }}>
-        {proteinGroups.map((p) => {
-          const isActive = p.key === selectedKey;
-          const style = isActive ? activeProteinCard : inactiveProteinCard;
-          return (
-            <button key={p.key} style={style} onClick={() => setSelectedKey(p.key)}>
-              {proteinLabel(p)} · {p.count} 篇
-            </button>
-          );
-        })}
-      </div>
+      {/* ---- 蛋白选择面板（可拖拽排序） ---- */}
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <SortableContext items={proteinGroups.map((p) => p.key)} strategy={horizontalListSortingStrategy}>
+          <div style={{ display: 'flex', gap: 'var(--space-md)', overflowX: 'auto', paddingBottom: 'var(--space-md)', marginBottom: 'var(--space-xl)' }}>
+            {proteinGroups.map((p) => {
+              const isActive = p.key === selectedKey;
+              return (
+                <SortableProteinCard
+                  key={p.key}
+                  protein={p}
+                  isActive={isActive}
+                  onClick={() => setSelectedKey(p.key)}
+                  onContextMenu={(e) => handleContextMenu(e, p.key)}
+                  activeStyle={activeProteinCard}
+                  inactiveStyle={inactiveProteinCard}
+                />
+              );
+            })}
+          </div>
+        </SortableContext>
+      </DndContext>
 
       {/* ---- 选中蛋白的文献表格 ---- */}
       {selectedProtein && entries.length > 0 ? (
@@ -436,6 +607,57 @@ export function ArticleSummaryPage() {
           >
             提交文献
           </button>
+        </div>
+      )}
+
+      {/* ---- 右键菜单 ---- */}
+      {ctxMenu && (
+        <div
+          style={{
+            position: 'fixed',
+            left: Math.min(ctxMenu.x, window.innerWidth - 210),
+            top: Math.min(ctxMenu.y, window.innerHeight - 60),
+            zIndex: 1000,
+            background: '#fff',
+            borderRadius: 8,
+            boxShadow: '0 4px 20px rgba(0,0,0,0.18)',
+            padding: 'var(--space-sm) 0',
+            minWidth: 220,
+            border: '1px solid var(--color-border)',
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {(() => {
+            const protein = proteinGroups.find((p) => p.key === ctxMenu.proteinKey);
+            const label = protein ? proteinLabel(protein) : '';
+            return (
+              <button
+                style={{
+                  display: 'block',
+                  width: '100%',
+                  padding: 'var(--space-sm) var(--space-lg)',
+                  border: 'none',
+                  background: 'none',
+                  cursor: 'pointer',
+                  fontSize: 'var(--text-sm)',
+                  textAlign: 'left',
+                  color: 'var(--color-text)',
+                  lineHeight: 1.4,
+                }}
+                onClick={handleBulkDelete}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = '#fef2f2';
+                  e.currentTarget.style.color = '#dc2626';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'none';
+                  e.currentTarget.style.color = 'var(--color-text)';
+                }}
+              >
+                删除 {label ? `「${label}」` : ''} 的全部文献
+              </button>
+            );
+          })()}
         </div>
       )}
     </div>
