@@ -11,19 +11,19 @@ echo ""
 
 # === 检测 Python ===
 PYTHON_CMD=""
-if command -v python3 &>/dev/null; then
+if command -v python3 >/dev/null 2>&1; then
     PYTHON_CMD="python3"
-elif command -v python &>/dev/null; then
+elif command -v python >/dev/null 2>&1; then
     PYTHON_CMD="python"
 else
     echo "[错误] 未检测到 Python。请安装 Python 3.10+。"
     echo "       https://www.python.org/downloads/"
     exit 1
 fi
-echo "[检测] Python: $PYTHON_CMD"
+echo "[检测] Python: $PYTHON_CMD ($($PYTHON_CMD --version 2>&1))"
 
 # === 检测 Node.js ===
-if ! command -v node &>/dev/null; then
+if ! command -v node >/dev/null 2>&1; then
     echo "[错误] 未检测到 Node.js。请安装 Node.js 18+。"
     echo "       https://nodejs.org/"
     exit 1
@@ -31,6 +31,11 @@ fi
 echo "[检测] Node.js: $(node --version)"
 
 # === 后端 .env 检查 ===
+if [ ! -f "backend/.env" ]; then
+    echo ""
+    echo "[错误] 缺少 backend/.env 文件！"
+    exit 1
+fi
 if grep -q "your-api-key-here" "backend/.env" 2>/dev/null; then
     echo ""
     echo "[!!!] 检测到 backend/.env 中 API Key 还是默认值！"
