@@ -1,0 +1,6 @@
+# Windows 批处理：禁止 git 转换行尾，必须保持 CRLF
+*.bat -text
+*.cmd -text
+
+# Shell 脚本：强制 LF
+*.sh text eol=lf
