@@ -152,6 +152,11 @@
   box-shadow: 0 0 0 2px rgba(14, 165, 122, 0.18);
 }
 
+.dotComplex {
+  background: #2EADB5;
+  box-shadow: 0 0 0 2px rgba(46, 173, 181, 0.18);
+}
+
 .dotCofactor {
   background: #5B8DEF;
   box-shadow: 0 0 0 2px rgba(91, 141, 239, 0.18);
