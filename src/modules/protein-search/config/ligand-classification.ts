@@ -16,20 +16,33 @@ import type { LigandSummary } from '../../shared/types';
 const BACKGROUND_LIGANDS = new Set([
   // 缓冲剂
   'TRS', 'MES', 'HEP', 'EPE', 'PIN', 'IMD', 'CAC', 'ACT', 'FLC', 'BIC', 'TRA',
+  'BIS', 'TAP', 'CHS', 'PIP', 'MOPS', 'BES', 'TES', 'HEPES',
+  // 有机酸（结晶缓冲/添加剂）
+  'CIT', 'TAR', 'MLT', 'OXL', 'SUC', 'FUM', 'MAE', 'FOR',
   // 盐类与离子
   'NA', 'CL', 'K', 'CA', 'MG', 'ZN', 'MN', 'CO', 'NI',
-  'SO4', 'PO4', 'NH4', 'LI', 'HG', 'CD', 'PT',
+  'SO4', 'PO4', 'NO3', 'NH4', 'LI', 'HG', 'CD', 'PT',
   // 沉淀剂与有机溶剂
   'PEG', 'PGE', 'PG4', 'PG5', 'PG6', 'PE7', 'PEU',
-  'MPD', 'MRD', 'IPA', 'EOH', 'MOH', '1BO',
+  'MPD', 'MRD', 'IPA', 'EOH', 'MOH', '1BO', 'SBT', 'TBU', 'PRL',
+  'DMF', 'ACN', 'DIO', 'DMS', 'DMX',
+  // 苯甲酸/苯胺类结晶添加剂
+  'BEZ', 'BZA', 'BEN', 'PHB',
   // 冷冻保护剂
   'GOL', 'CRY', 'EDO', 'PGO', 'PDO', 'BU1', 'BU2', 'BU3',
+  // 糖类（结晶保护剂/添加剂，非生物配体用途）
+  'SUC', 'SOR', 'XYS', 'FRU', 'MAL', 'LBT', 'TRE',
   // 去垢剂与添加剂
   'LMT', 'DDM', 'BOG', 'LDA', 'TAM', 'CHL', 'BE7', 'TFP',
+  'OCT', 'DMU', 'LMD', 'UDA', 'D12', 'HEC', 'CYM',
+  // 还原剂
+  'DTE', 'DTT', 'TCE', 'BME',
+  // 聚胺 / 常用添加剂
+  'SPM', 'SPD', 'CAD', 'PUT', 'TMA', 'TEA',
   // 水
   'HOH', 'DOD',
   // 其它结晶添加剂（含稀有金属离子）
-  'DMS', 'BME', 'FMT', 'SCN', 'BR', 'I', 'CS', 'RB',
+  'FMT', 'SCN', 'BR', 'I', 'CS', 'RB', 'IOD',
   'AU', 'AG', 'AL', 'BA', 'BE', 'BI', 'CR', 'CU', 'ER', 'EU',
   'FE', 'GA', 'GD', 'GE', 'IN', 'IR', 'LA', 'LU', 'MO', 'ND',
   'OS', 'PB', 'PD', 'PR', 'RA', 'RH', 'RU', 'SB', 'SE', 'SM',
