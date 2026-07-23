@@ -8,6 +8,7 @@ import type {
   EntityCoverage,
   StructureFeature,
   LigandSummary,
+  PolymerBindingPartner,
 } from '../../shared/types';
 
 const RCSB_SEARCH = 'https://search.rcsb.org/rcsbsearch/v2/query';
@@ -156,10 +157,24 @@ async function getSinglePdbStructure(
 
   // 3. 解析 polymer entities
   const coverages: EntityCoverage[] = [];
+  const polymerMeta: { entityId: number; chainId: string; seqLen: number; polymerType: string; uniprotAccession: string | null }[] = [];
+
   for (const idx of polymerIndices) {
     const poly = allResults[idx] as RcsbPolymerEntityResponse | null;
-    if (poly) coverages.push(parsePolymerEntity(poly));
+    if (!poly) continue;
+    const cov = parsePolymerEntity(poly);
+    coverages.push(cov);
+    polymerMeta.push({
+      entityId: cov.entityId,
+      chainId: cov.chainId,
+      seqLen: cov.sequence.length,
+      polymerType: poly.entity_poly?.rcsb_entity_polymer_type || 'Protein',
+      uniprotAccession: cov.uniprotAccession,
+    });
   }
+
+  // 3a. 识别共晶聚合物配体（非主体蛋白的 peptide/DNA/RNA/其他蛋白）
+  const bindingPartners = detectBindingPartners(polymerMeta);
 
   // 4. 解析 nonpolymer entities
   const ligands: LigandSummary[] = [];
@@ -191,6 +206,7 @@ async function getSinglePdbStructure(
     bindingAffinityCompIds: bindingAffinityCompIds.size > 0
       ? [...bindingAffinityCompIds]
       : undefined,
+    bindingPartners: bindingPartners.length > 0 ? bindingPartners : undefined,
   };
 }
 
@@ -267,6 +283,73 @@ function parsePolymerEntity(poly: RcsbPolymerEntityResponse): EntityCoverage {
     features,
     coverageRatio,
   };
+}
+
+/**
+ * 识别共晶聚合物配体 — 非主体蛋白的 polymer entity
+ *
+ * 以最长 polypeptide 为主体，其余 polymer entity 分类为：
+ * - Protein < 50 aa → peptide (短肽配体)
+ * - Protein ≥ 50 aa → protein (蛋白结合伴侣)
+ * - DNA / RNA → dna / rna (寡核苷酸)
+ * - 只有 1 个 polymer entity 时返回空数组
+ */
+function detectBindingPartners(
+  polymers: { entityId: number; chainId: string; seqLen: number; polymerType: string; uniprotAccession: string | null }[],
+): PolymerBindingPartner[] {
+  if (polymers.length <= 1) return [];
+
+  // 找最长 polypeptide 作为主体（忽略 DNA/RNA 当主体的边缘情况）
+  let mainIdx = 0;
+  let maxLen = 0;
+  for (let i = 0; i < polymers.length; i++) {
+    const p = polymers[i];
+    const isProtein = p.polymerType === 'Protein' || !p.polymerType;
+    const len = isProtein ? p.seqLen : 0;
+    if (len > maxLen) {
+      maxLen = len;
+      mainIdx = i;
+    }
+  }
+
+  // 如果主体是 DNA/RNA（即所有 entity 都是 DNA/RNA），则不产生 binding partner
+  if (maxLen === 0) return [];
+
+  const partners: PolymerBindingPartner[] = [];
+
+  for (let i = 0; i < polymers.length; i++) {
+    if (i === mainIdx) continue;
+    const p = polymers[i];
+
+    let type: PolymerBindingPartner['type'];
+    let desc: string;
+
+    if (p.polymerType === 'DNA') {
+      type = 'dna';
+      desc = `DNA (${p.seqLen} nt)`;
+    } else if (p.polymerType === 'RNA') {
+      type = 'rna';
+      desc = `RNA (${p.seqLen} nt)`;
+    } else if (p.seqLen < 50) {
+      type = 'peptide';
+      const gene = p.uniprotAccession ? ` ${p.uniprotAccession}` : '';
+      desc = `Peptide${gene} (${p.seqLen} aa)`;
+    } else {
+      type = 'protein';
+      const gene = p.uniprotAccession ? ` ${p.uniprotAccession}` : '';
+      desc = `Protein${gene} (${p.seqLen} aa)`;
+    }
+
+    partners.push({
+      entityId: p.entityId,
+      chainId: p.chainId,
+      type,
+      description: desc,
+      uniprotAccession: p.uniprotAccession,
+    });
+  }
+
+  return partners;
 }
 
 /**

@@ -47,6 +47,8 @@ export interface PdbStructure {
   organism: string;                   // rcsb_entity_source_organism[0].ncbi_scientific_name
   /** 有 binding affinity 数据的 comp_id 列表（用于抑制剂判定） */
   bindingAffinityCompIds?: string[];
+  /** 共晶聚合物配体（非主体蛋白的 polymer entity：肽段/DNA/RNA/其他蛋白） */
+  bindingPartners?: PolymerBindingPartner[];
 }
 
 /** 单个 polymer entity 的结构覆盖信息 */
@@ -82,6 +84,17 @@ export interface LigandSummary {
   classification: LigandClass;
 }
 
+/** 共晶聚合物配体 — 非主体蛋白的 polymer entity（肽段/DNA/RNA/其他蛋白） */
+export interface PolymerBindingPartner {
+  entityId: number;
+  chainId: string;
+  /** 'peptide' | 'protein' | 'dna' | 'rna' */
+  type: 'peptide' | 'protein' | 'dna' | 'rna';
+  /** 简短描述，如 "USP8 peptide (17 aa)" */
+  description: string;
+  uniprotAccession: string | null;
+}
+
 /** 配体分类 */
 export type LigandClass =
   | 'cofactor'       // 天然辅因子 (NATIVE_LIGANDS 白名单命中)
@@ -97,7 +110,8 @@ export const LIGAND_COLORS: Record<LigandClass, string> = {
 
 /** PDB 结构排序优先级 */
 export type SortPriority =
-  | 'apo'              // 无抑制剂、无辅因子
+  | 'apo'              // 无抑制剂、无辅因子、无聚合物配体
+  | 'complex'          // 有共晶肽段/DNA/蛋白伴侣，无小分子配体
   | 'holo_cofactor'    // 无抑制剂、有天然辅因子
   | 'inhibited';       // 有外来抑制剂
 

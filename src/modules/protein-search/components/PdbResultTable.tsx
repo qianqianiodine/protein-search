@@ -7,6 +7,7 @@ import styles from './PdbResultTable.module.css';
 
 const PRIORITY_LABEL: Record<string, { text: string; dotClass: string }> = {
   apo: { text: 'Apo', dotClass: styles.dotApo },
+  complex: { text: '复合物', dotClass: styles.dotComplex },
   holo_cofactor: { text: '辅因子', dotClass: styles.dotCofactor },
   inhibited: { text: '抑制剂', dotClass: styles.dotInhibitor },
 };

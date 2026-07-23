@@ -5,9 +5,10 @@ import { classifyLigands } from '../config/ligand-classification';
  * 对已分类的 PDB 结构计算排序优先级
  *
  * 优先级（高→低）:
- * 1. apo — 无抑制剂、无辅因子（真正干净）
- * 2. holo_cofactor — 无抑制剂、有天然辅因子
- * 3. inhibited — 有外来抑制剂
+ * 1. apo — 无任何配体/伴侣（真正干净）
+ * 2. complex — 有共晶肽段/DNA/蛋白伴侣，无小分子配体
+ * 3. holo_cofactor — 无抑制剂、有天然辅因子
+ * 4. inhibited — 有外来抑制剂
  *
  * 结晶/缓冲液成分已被分类为 crystal，不影响排序
  */
@@ -25,15 +26,21 @@ export function computeSortPriority(
   if (hasInhibitor) return 'inhibited';
   if (hasCofactor) return 'holo_cofactor';
 
-  // 无抑制剂、无辅因子 = 真正 apo
+  // 有共晶肽段/DNA/蛋白伴侣 → 非 apo
+  if (structure.bindingPartners && structure.bindingPartners.length > 0) {
+    return 'complex';
+  }
+
+  // 以上皆无 = 真正 apo
   return 'apo';
 }
 
 /** 排序优先级数值映射（越小越靠前） */
 const PRIORITY_ORDER: Record<SortPriority, number> = {
   apo: 0,
-  holo_cofactor: 1,
-  inhibited: 2,
+  complex: 1,
+  holo_cofactor: 2,
+  inhibited: 3,
 };
 
 /** 按排序优先级 + DOI 分组排列 PDB 结构 */
