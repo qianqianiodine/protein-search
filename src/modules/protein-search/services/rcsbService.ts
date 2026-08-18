@@ -105,6 +105,16 @@ export async function getPdbStructures(
   return results;
 }
 
+/** polymer entity 元信息（detectBindingPartners 的输入） */
+type PolymerMetaEntry = {
+  entityId: number;
+  chainId: string;
+  seqLen: number;
+  polymerType: string;
+  uniprotAccession: string | null;
+  sequence: string;
+};
+
 /**
  * 获取单个 PDB 结构详情
  * Entry + binding affinity (并行) → 一次性并行获取所有 entities (polymer + nonpolymer)
@@ -157,7 +167,7 @@ async function getSinglePdbStructure(
 
   // 3. 解析 polymer entities
   const coverages: EntityCoverage[] = [];
-  const polymerMeta: { entityId: number; chainId: string; seqLen: number; polymerType: string; uniprotAccession: string | null }[] = [];
+  const polymerMeta: PolymerMetaEntry[] = [];
 
   for (const idx of polymerIndices) {
     const poly = allResults[idx] as RcsbPolymerEntityResponse | null;
@@ -170,6 +180,7 @@ async function getSinglePdbStructure(
       seqLen: cov.sequence.length,
       polymerType: poly.entity_poly?.rcsb_entity_polymer_type || 'Protein',
       uniprotAccession: cov.uniprotAccession,
+      sequence: cov.sequence,
     });
   }
 
@@ -293,9 +304,12 @@ function parsePolymerEntity(poly: RcsbPolymerEntityResponse): EntityCoverage {
  * - Protein ≥ 50 aa → protein (蛋白结合伴侣)
  * - DNA / RNA → dna / rna (寡核苷酸)
  * - 只有 1 个 polymer entity 时返回空数组
+ *
+ * 同一蛋白的多个 entity（不同 construct / 加工产物：同 UniProt accession，
+ * 或序列包含关系）不算结合伴侣 —— 只有**不同**大分子才构成复合物。
  */
 function detectBindingPartners(
-  polymers: { entityId: number; chainId: string; seqLen: number; polymerType: string; uniprotAccession: string | null }[],
+  polymers: PolymerMetaEntry[],
 ): PolymerBindingPartner[] {
   if (polymers.length <= 1) return [];
 
@@ -315,11 +329,36 @@ function detectBindingPartners(
   // 如果主体是 DNA/RNA（即所有 entity 都是 DNA/RNA），则不产生 binding partner
   if (maxLen === 0) return [];
 
+  // 同蛋白排除规则：只对 protein 类候选生效，DNA/RNA 等永远算结合伴侣
+  const MIN_OVERLAP = 10;
+  const normSeq = (s: string) => s.replace(/\s+/g, '').toUpperCase();
+  const isProteinLike = (t: string) => t === 'Protein' || !t;
+
+  function isSameProtein(main: PolymerMetaEntry, p: PolymerMetaEntry): boolean {
+    // 规则1: 双方都有 accession —— 相等即同蛋白，不等即不同蛋白（不再兜底）
+    if (main.uniprotAccession && p.uniprotAccession) {
+      return (
+        main.uniprotAccession.toUpperCase() === p.uniprotAccession.toUpperCase()
+      );
+    }
+    // 规则2: 至少一方无 accession —— 序列兜底（短序列 ≥10 aa 且被长序列包含）
+    const a = normSeq(main.sequence);
+    const b = normSeq(p.sequence);
+    if (!a || !b) return false;
+    const [short, long] = a.length <= b.length ? [a, b] : [b, a];
+    return short.length >= MIN_OVERLAP && long.includes(short);
+  }
+
   const partners: PolymerBindingPartner[] = [];
 
   for (let i = 0; i < polymers.length; i++) {
     if (i === mainIdx) continue;
     const p = polymers[i];
+
+    // 同一蛋白的多个 entity（不同 construct/加工产物）不算结合伴侣
+    if (isProteinLike(p.polymerType) && isSameProtein(polymers[mainIdx], p)) {
+      continue;
+    }
 
     let type: PolymerBindingPartner['type'];
     let desc: string;
