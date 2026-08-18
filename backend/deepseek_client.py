@@ -35,6 +35,7 @@ async def extract_section(system_prompt: str, user_prompt: str, markdown_text: s
             messages=messages,
             temperature=0.2,    # 信息提取需要一定灵活性，太低容易漏内容
             max_tokens=16384,
+            extra_body={"thinking": {"type": "disabled"}},  # 关闭思考模式（v4 默认开启），信息提取不需要推理
         ),
     )
 
