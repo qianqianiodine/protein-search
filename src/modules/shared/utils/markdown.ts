@@ -91,8 +91,8 @@ export function stripMarkdown(md: string): string {
     .trim();
 }
 
-/** 「关键摘要」行前缀（不捕获文本，CRLF 安全） */
-const SUMMARY_LINE_RE = /^\s*\*{0,2}关键摘要[:：]\*{0,2}/;
+/** 「关键摘要」行匹配（捕获组 = 摘要文本；前缀匹配，CRLF 安全） */
+const SUMMARY_LINE_RE = /^\s*\*{0,2}关键摘要[:：]\*{0,2}\s*(.*)$/;
 
 /** 摘除板块内容里残留的「关键摘要」行（历史缓存兜底；摘要只应存在于 summaries 字段） */
 export function stripSummaryLines(content: string): string {
@@ -102,6 +102,16 @@ export function stripSummaryLines(content: string): string {
     .filter((l) => !SUMMARY_LINE_RE.test(l))
     .join('\n')
     .trim();
+}
+
+/** 从板块内容里摘出「关键摘要」行的文本（旧缓存无 summaries 字段时兜底） */
+export function extractSummaryLine(content: string): string {
+  if (!content) return '';
+  for (const line of content.split('\n')) {
+    const m = SUMMARY_LINE_RE.exec(line);
+    if (m && m[1].trim()) return m[1].trim();
+  }
+  return '';
 }
 
 /** 从 Markdown 提取前 N 个词的预览文本 */

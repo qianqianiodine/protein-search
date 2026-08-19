@@ -1,9 +1,9 @@
 import { useCallback, useRef, useState } from 'react';
-import type { ArticleExtraction } from '../../shared/types';
+import type { ArticleExtraction, ExtractionSectionKey } from '../../shared/types';
 import { AnnotationToolbar } from './AnnotationToolbar';
 import { renderMarkdown, stripSummaryLines } from '../../shared/utils/markdown';
 
-const SECTIONS: Array<{ key: keyof ArticleExtraction; label: string }> = [
+const SECTIONS: Array<{ key: ExtractionSectionKey; label: string }> = [
   { key: 'construct', label: '蛋白构建' },
   { key: 'expression', label: '表达' },
   { key: 'purification', label: '纯化' },

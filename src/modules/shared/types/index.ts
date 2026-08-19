@@ -274,6 +274,13 @@ export interface SearchHistoryEntry {
 // Article-Search 相关类型
 // ============================================================
 
+/** 四大板块的 key 联合类型 */
+export type ExtractionSectionKey =
+  | 'construct'
+  | 'expression'
+  | 'purification'
+  | 'crystallization';
+
 /** 单篇文献提取结果 — 四大块 */
 export interface ArticleExtraction {
   construct: string;         // Markdown — 蛋白构建信息

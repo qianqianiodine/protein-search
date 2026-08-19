@@ -7,6 +7,7 @@ import {
   loadArticleExtraction,
   loadArticleExtractionById,
   findExtractionByProtein,
+  deleteArticleHistory,
 } from '../services/articleHistoryService';
 import { PdfUploader } from '../components/PdfUploader';
 import { ExtractionResult } from '../components/ExtractionResult';
@@ -49,6 +50,8 @@ export function ArticleSearchPage() {
   const [added, setAdded] = useState(() => isInSummary(doi, uniprot, gene, paperTitle));
   const [pastedTitle, setPastedTitle] = useState(paperTitle || '');
   const activeTaskIdRef = useRef<string | null>(null);
+  // 记住本次页面加载时命中的历史缓存条目 —— 重新上传时把它删掉（旧缓存数据不应继续存在）
+  const cachedEntryIdRef = useRef<string | null>(null);
 
   // Bug③修复：当 doi/uniprot 变化时（如同页面从通知跳转到不同文献），重置所有状态
   useEffect(() => {
@@ -63,12 +66,14 @@ export function ArticleSearchPage() {
           ? findExtractionByProtein(uniprot, gene)
           : null;
     if (newCached) {
+      cachedEntryIdRef.current = newCached.id;
       setExtraction(newCached.extraction);
       setPhase('done');
       setExtractedFromCache(true);
       setAdded(isInSummary(doi, uniprot, gene, paperTitle));
       setError(null);
     } else {
+      cachedEntryIdRef.current = null;
       // 任务查找：extractionId → doi+uniprot
       // 无 extractionId 且无 DOI 时不查找（手动上传，用户要的是全新提交）
       let existingTask = extractionId
@@ -144,6 +149,12 @@ export function ArticleSearchPage() {
       setError(null);
       setExtractedFromCache(false);
 
+      // 重新上传 → 删除旧的历史缓存条目（新提取结果会重新保存并刷新汇总行）
+      if (cachedEntryIdRef.current) {
+        deleteArticleHistory(cachedEntryIdRef.current);
+        cachedEntryIdRef.current = null;
+      }
+
       const taskId = analysisTaskManager.startTask(
         { doi, pdb, uniprot, proteinName, gene, paperTitle },
         mainPdf,
@@ -159,6 +170,13 @@ export function ArticleSearchPage() {
       setPhase('extracting');
       setError(null);
       setExtractedFromCache(false);
+
+      // 重新提交 → 删除旧的历史缓存条目（新提取结果会重新保存并刷新汇总行）
+      if (cachedEntryIdRef.current) {
+        deleteArticleHistory(cachedEntryIdRef.current);
+        cachedEntryIdRef.current = null;
+      }
+
       const effectiveTitle = hasPdb ? paperTitle : pastedTitle;
       const taskId = analysisTaskManager.startTask(
         { doi, pdb, uniprot, proteinName, gene, paperTitle: effectiveTitle },
