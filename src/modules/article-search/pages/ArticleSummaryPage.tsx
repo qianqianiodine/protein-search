@@ -387,6 +387,8 @@ export function ArticleSummaryPage() {
     if (entry.proteinName) params.set('proteinName', entry.proteinName);
     if (entry.gene) params.set('gene', entry.gene);
     if (entry.title) params.set('title', entry.title);
+    // 查看详情模式：分析页加载缓存/汇总数据（与手动提交入口区分）
+    params.set('view', '1');
     saveScrollPosition(SCROLL_KEY);
     navigate(`/article-search?${params.toString()}`);
   };
