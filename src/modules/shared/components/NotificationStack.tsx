@@ -73,6 +73,8 @@ export function NotificationStack() {
       if (paperTitle) params.set('title', paperTitle);
       // 无 DOI 时传 extractionId，确保跳转后能通过 ID 找到缓存
       if (!doi) params.set('extractionId', task.id);
+      // 通知跳转 = 查看详情模式，允许分析页加载缓存/结果
+      params.set('view', '1');
       analysisTaskManager.dismissTask(task.id);
       navigate(`/article-search?${params.toString()}`);
     },

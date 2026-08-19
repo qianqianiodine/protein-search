@@ -15,6 +15,30 @@ import type { ArticleExtraction } from '../../shared/types';
 
 type Phase = 'idle' | 'extracting' | 'done';
 
+/** 查看详情模式（view=1）的恢复数据源：历史缓存 → 汇总条目兜底。
+ *  historyId 为 null 表示数据来自汇总条目（历史缓存无对应条目，重新上传时无需删除） */
+function loadCachedView(
+  extractionId: string,
+  doi: string,
+  uniprot: string,
+  gene: string,
+  title: string,
+): { historyId: string | null; extraction: ArticleExtraction } | null {
+  const history = extractionId
+    ? (loadArticleExtractionById(extractionId) ||
+       (uniprot ? findExtractionByProtein(uniprot, gene) : null))
+    : doi && uniprot
+      ? loadArticleExtraction(doi, uniprot)
+      : uniprot
+        ? findExtractionByProtein(uniprot, gene)
+        : null;
+  if (history) return { historyId: history.id, extraction: history.extraction };
+  // 历史缓存缺失时从汇总条目兜底（如缓存被挤出 50 条上限）
+  const summary = findSummaryEntry(doi, uniprot, gene, title);
+  if (summary) return { historyId: null, extraction: summary.extraction };
+  return null;
+}
+
 export function ArticleSearchPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -29,18 +53,15 @@ export function ArticleSearchPage() {
   const gene = searchParams.get('gene') || '';
   const paperTitle = searchParams.get('title') || '';
   const extractionId = searchParams.get('extractionId') || '';
+  // 查看详情模式：汇总页点击文献名称 / 任务完成通知跳转时携带 view=1
+  // 只有此模式才加载缓存；手动提交入口（PDB 表格「分析」/ 汇总页「提交文献」）始终进入空白表单
+  const viewMode = searchParams.get('view') === '1';
 
-  // 页面加载时检查缓存
-  // 只有能精确匹配到某篇文献时才加载缓存：extractionId 或 doi+uniprot
-  // 只有 uniprot 时不加载（用户可能是要提交同一蛋白的新文献，不应显示旧结果）
-  const cached = extractionId
-    ? (loadArticleExtractionById(extractionId) ||
-       (uniprot ? findExtractionByProtein(uniprot, gene) : null))
-    : doi && uniprot
-      ? loadArticleExtraction(doi, uniprot)
-      : uniprot
-        ? findExtractionByProtein(uniprot, gene)
-        : null;
+  // 页面加载时检查缓存 —— 仅查看详情模式（view=1）加载；
+  // 提交模式不加载（用户要提交新文献，界面应保持干净空白）
+  const cached = viewMode
+    ? loadCachedView(extractionId, doi, uniprot, gene, paperTitle)
+    : null;
   const [phase, setPhase] = useState<Phase>(cached ? 'done' : 'idle');
   const [extraction, setExtraction] = useState<ArticleExtraction | null>(
     cached?.extraction || null,
@@ -51,22 +72,16 @@ export function ArticleSearchPage() {
   const [pastedTitle, setPastedTitle] = useState(paperTitle || '');
   const activeTaskIdRef = useRef<string | null>(null);
   // 记住本次页面加载时命中的历史缓存条目 —— 重新上传时把它删掉（旧缓存数据不应继续存在）
-  const cachedEntryIdRef = useRef<string | null>(null);
+  const cachedEntryIdRef = useRef<string | null>(cached?.historyId ?? null);
 
   // Bug③修复：当 doi/uniprot 变化时（如同页面从通知跳转到不同文献），重置所有状态
   useEffect(() => {
-    // 缓存查找：只有 extractionId 或 doi+uniprot 能精确匹配才加载
-    // 只有 uniprot 时不加载缓存（用户可能是要提交同一蛋白的新文献）
-    const newCached = extractionId
-      ? (loadArticleExtractionById(extractionId) ||
-         (uniprot ? findExtractionByProtein(uniprot, gene) : null))
-      : doi && uniprot
-        ? loadArticleExtraction(doi, uniprot)
-        : uniprot
-          ? findExtractionByProtein(uniprot, gene)
-          : null;
+    // 缓存查找：仅查看详情模式（view=1）加载；提交模式界面保持空白
+    const newCached = viewMode
+      ? loadCachedView(extractionId, doi, uniprot, gene, paperTitle)
+      : null;
     if (newCached) {
-      cachedEntryIdRef.current = newCached.id;
+      cachedEntryIdRef.current = newCached.historyId;
       setExtraction(newCached.extraction);
       setPhase('done');
       setExtractedFromCache(true);
@@ -76,12 +91,16 @@ export function ArticleSearchPage() {
       cachedEntryIdRef.current = null;
       // 任务查找：extractionId → doi+uniprot
       // 无 extractionId 且无 DOI 时不查找（手动上传，用户要的是全新提交）
-      let existingTask = extractionId
+      const foundTask = extractionId
         ? (analysisTaskManager.getTask(extractionId) ||
            (uniprot ? analysisTaskManager.findTaskByUniprot(uniprot) : undefined))
         : doi && uniprot
           ? analysisTaskManager.getTaskByMetadata(doi, uniprot)
           : undefined;
+      // 提交模式只恢复 running 任务（切走再回来应看到"正在提取"，避免误以为任务丢失）；
+      // completed/failed 不恢复 —— 手动提交界面保持空白
+      const existingTask =
+        viewMode || foundTask?.status === 'running' ? foundTask : undefined;
       if (existingTask?.status === 'completed' && existingTask.extraction) {
         setExtraction(existingTask.extraction);
         setPhase('done');
@@ -108,7 +127,7 @@ export function ArticleSearchPage() {
     }
     // Bug①修复：切换文献时清除旧 PDF 缓存
     clearPendingPdfs();
-  }, [doi, uniprot, extractionId]);
+  }, [doi, uniprot, extractionId, viewMode]);
 
   // Bug①修复：离开页面时清除 PDF 缓存
   useEffect(() => {
