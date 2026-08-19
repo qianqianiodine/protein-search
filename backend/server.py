@@ -203,6 +203,23 @@ def _build_meta_section(doi: str, pdb: str, uniprot: str, paper_title: str) -> t
 
 # ---- 输出解析 ----
 
+_SUMMARY_LINE_RE = re.compile(r"^\s*\*{0,2}关键摘要[:：]\*{0,2}\s*(.*)$")
+
+
+def _split_summary_line(section_text: str) -> tuple[str, str]:
+    """按行摘出「关键摘要」行（无论位置），返回 (板块内容, 摘要)"""
+    summary = ""
+    kept: list[str] = []
+    for line in section_text.split("\n"):
+        m = _SUMMARY_LINE_RE.match(line)
+        if m:
+            if not summary:
+                summary = m.group(1).strip()
+        else:
+            kept.append(line)
+    return re.sub(r"\n{3,}", "\n\n", "\n".join(kept)).strip(), summary
+
+
 def _parse_combined(text: str) -> tuple[dict[str, str], dict[str, str]]:
     """将合并输出的文本按板块标题拆分，返回 (sections, summaries)"""
     sections_order = [
@@ -232,17 +249,10 @@ def _parse_combined(text: str) -> tuple[dict[str, str], dict[str, str]]:
         section_text = text[content_start:end_idx] if end_idx != -1 else text[content_start:]
         section_text = section_text.strip()
 
-        # 解析 **关键摘要：** 行（位于板块末尾，用 search 而非 match）
-        summary_match = re.search(
-            r"\*{2}关键摘要[:：]\*{2}\s*(.+?)(?:\n\n|\n(?:\*{1,2}|#)|$)",
-            section_text
-        )
-        if summary_match:
-            summaries[key] = summary_match.group(1).strip()
-            result[key] = section_text[:summary_match.start()].strip()  # 取摘要之前的内容（摘要位于末尾）
-        else:
-            summaries[key] = ""
-            result[key] = section_text
+        # 解析 **关键摘要：** 行：按行摘除（无论摘要行在板块什么位置），其余内容原样保留
+        section_text, summary = _split_summary_line(section_text)
+        summaries[key] = summary
+        result[key] = section_text
 
     return result, summaries
 

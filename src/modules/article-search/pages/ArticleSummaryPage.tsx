@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import ExcelJS from 'exceljs';
 import { loadSummary, loadProteinOrder, removeFromSummary, saveProteinOrder, saveSummary } from '../services/summaryStorage';
-import { renderMarkdown, stripMarkdown } from '../../shared/utils/markdown';
+import { renderMarkdown, stripMarkdown, stripSummaryLines } from '../../shared/utils/markdown';
 import { saveScrollPosition, restoreScrollPosition } from '../../shared/services/scrollPosition';
 import type { ArticleExtraction, SummaryEntry } from '../../shared/types';
 import {
@@ -317,7 +317,7 @@ export function ArticleSummaryPage() {
   const getSummary = (entry: SummaryEntry, col: (typeof COLUMNS)[0]) => {
     const s = entry.extraction.summaries?.[col.key];
     if (s) return stripMarkdown(s);
-    const text = stripMarkdown(entry.extraction[col.key]);
+    const text = stripMarkdown(stripSummaryLines(entry.extraction[col.key]));
     return text.length > 100 ? text.slice(0, 100) + '...' : text;
   };
 
@@ -342,16 +342,16 @@ export function ArticleSummaryPage() {
       const row = ws.addRow([
         e.doi || e.title || e.pdbId || e.uniprot,
         e.pdbId,
-        stripMarkdown(e.extraction.construct),
-        stripMarkdown(e.extraction.expression),
-        stripMarkdown(e.extraction.purification),
-        stripMarkdown(e.extraction.crystallization),
+        stripMarkdown(stripSummaryLines(e.extraction.construct)),
+        stripMarkdown(stripSummaryLines(e.extraction.expression)),
+        stripMarkdown(stripSummaryLines(e.extraction.purification)),
+        stripMarkdown(stripSummaryLines(e.extraction.crystallization)),
       ]);
 
       // 对每个提取字段，检测是否有 markdown **bold** 格式，有则用富文本
       const cols = COLUMNS;
       for (let i = 0; i < cols.length; i++) {
-        const rawText = e.extraction[cols[i].key];
+        const rawText = stripSummaryLines(e.extraction[cols[i].key]);
         if (/\*\*.*?\*\*/.test(rawText)) {
           row.getCell(i + 3).value = { richText: markdownToRichText(rawText, cols[i].key) };
         }
@@ -563,7 +563,7 @@ export function ArticleSummaryPage() {
                           }}
                         >
                           {isExpanded ? (
-                            <div className="md-content" dangerouslySetInnerHTML={{ __html: renderMarkdown(fullText, col.key) }} />
+                            <div className="md-content" dangerouslySetInnerHTML={{ __html: renderMarkdown(stripSummaryLines(fullText), col.key) }} />
                           ) : (
                             <div style={summaryStyle}>
                               {getSummary(entry, col)}

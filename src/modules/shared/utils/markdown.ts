@@ -91,6 +91,19 @@ export function stripMarkdown(md: string): string {
     .trim();
 }
 
+/** 「关键摘要」行前缀（不捕获文本，CRLF 安全） */
+const SUMMARY_LINE_RE = /^\s*\*{0,2}关键摘要[:：]\*{0,2}/;
+
+/** 摘除板块内容里残留的「关键摘要」行（历史缓存兜底；摘要只应存在于 summaries 字段） */
+export function stripSummaryLines(content: string): string {
+  if (!content) return '';
+  return content
+    .split('\n')
+    .filter((l) => !SUMMARY_LINE_RE.test(l))
+    .join('\n')
+    .trim();
+}
+
 /** 从 Markdown 提取前 N 个词的预览文本 */
 export function previewText(md: string, maxWords = 12): string {
   const plain = stripMarkdown(md);

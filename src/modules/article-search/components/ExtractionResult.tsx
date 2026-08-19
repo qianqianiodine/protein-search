@@ -1,7 +1,7 @@
 import { useCallback, useRef, useState } from 'react';
 import type { ArticleExtraction } from '../../shared/types';
 import { AnnotationToolbar } from './AnnotationToolbar';
-import { renderMarkdown } from '../../shared/utils/markdown';
+import { renderMarkdown, stripSummaryLines } from '../../shared/utils/markdown';
 
 const SECTIONS: Array<{ key: keyof ArticleExtraction; label: string }> = [
   { key: 'construct', label: '蛋白构建' },
@@ -74,7 +74,7 @@ function SectionBlock({ title, content, sectionKey }: { title: string; content: 
         style={contentStyle}
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
-        dangerouslySetInnerHTML={{ __html: renderMarkdown(content, sectionKey) }}
+        dangerouslySetInnerHTML={{ __html: renderMarkdown(stripSummaryLines(content), sectionKey) }}
       />
       {focused && (
         <AnnotationToolbar
