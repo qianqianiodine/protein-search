@@ -1,6 +1,7 @@
 import type { ArticleExtraction } from '../../shared/types';
 import { extractPdf } from './extractionService';
 import { saveArticleExtraction } from './articleHistoryService';
+import { updateSummaryExtraction } from './summaryStorage';
 
 // ---- Types ----
 
@@ -185,6 +186,12 @@ class AnalysisTaskManager {
           extraction: result,
           timestamp: Date.now(),
         });
+
+        // 重新上传同一篇文献 → 汇总里对应的行刷新为新提取内容
+        updateSummaryExtraction(
+          { doi, uniprot, gene, title: effectiveTitle || '' },
+          result,
+        );
       }
     } catch (err: unknown) {
       if (task.controller.signal.aborted) return;

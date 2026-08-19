@@ -1,4 +1,4 @@
-import type { SummaryEntry } from '../../shared/types';
+import type { ArticleExtraction, SummaryEntry } from '../../shared/types';
 
 const STORAGE_KEY = 'article-summary-entries';
 const ORDER_KEY = 'article-summary-protein-order';
@@ -59,6 +59,18 @@ export function addToSummary(entry: SummaryEntry): void {
 
 export function removeFromSummary(id: string): void {
   const entries = loadSummary().filter((e) => e.id !== id);
+  saveSummary(entries);
+}
+
+/** 用新的提取结果刷新汇总中匹配条目的内容（保留条目 id/置顶/顺序）；无匹配条目时不做任何事 */
+export function updateSummaryExtraction(
+  match: { doi: string; uniprot: string; gene?: string; title?: string },
+  extraction: ArticleExtraction,
+): void {
+  const entries = loadSummary();
+  const idx = entries.findIndex((e) => isSameEntry(match, e));
+  if (idx === -1) return;
+  entries[idx] = { ...entries[idx], extraction };
   saveSummary(entries);
 }
 

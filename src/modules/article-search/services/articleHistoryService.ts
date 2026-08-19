@@ -109,6 +109,21 @@ export function deleteArticleExtractionsByKeys(
   localStorage.setItem(STORAGE_KEY, JSON.stringify(remaining));
 }
 
+/** 删除与汇总条目对应的提取缓存（匹配逻辑与 summaryStorage.isSameEntry 一致：有 DOI 按 doi+uniprot；无 DOI 按 gene+title） */
+export function deleteArticleExtractionForEntry(entry: {
+  doi: string;
+  uniprot: string;
+  gene?: string;
+  title?: string;
+}): void {
+  const remaining = loadAllArticleHistory().filter((e) => {
+    if (e.doi !== entry.doi || e.uniprot !== entry.uniprot) return true;
+    if (entry.doi) return false; // 有 DOI → 同 doi+uniprot 即同一篇，删除
+    return !(e.gene === entry.gene && e.title === entry.title); // 无 DOI → 需 gene+title 同时匹配才删
+  });
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(remaining));
+}
+
 function genId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }

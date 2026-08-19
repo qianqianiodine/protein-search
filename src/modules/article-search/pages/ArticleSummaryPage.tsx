@@ -2,9 +2,10 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import ExcelJS from 'exceljs';
 import { loadSummary, loadProteinOrder, removeFromSummary, saveProteinOrder, saveSummary } from '../services/summaryStorage';
-import { renderMarkdown, stripMarkdown, stripSummaryLines } from '../../shared/utils/markdown';
+import { extractSummaryLine, renderMarkdown, stripMarkdown, stripSummaryLines } from '../../shared/utils/markdown';
+import { deleteArticleExtractionForEntry } from '../services/articleHistoryService';
 import { saveScrollPosition, restoreScrollPosition } from '../../shared/services/scrollPosition';
-import type { ArticleExtraction, SummaryEntry } from '../../shared/types';
+import type { ExtractionSectionKey, SummaryEntry } from '../../shared/types';
 import {
   DndContext,
   PointerSensor,
@@ -51,7 +52,7 @@ function markdownToRichText(md: string, section: string): ExcelJS.RichText[] {
   return richText;
 }
 
-const COLUMNS: Array<{ key: keyof ArticleExtraction; label: string }> = [
+const COLUMNS: Array<{ key: ExtractionSectionKey; label: string }> = [
   { key: 'construct', label: '蛋白构建' },
   { key: 'expression', label: '表达' },
   { key: 'purification', label: '纯化' },
@@ -275,6 +276,10 @@ export function ArticleSummaryPage() {
     const entry = allEntries.find((e) => e.id === id);
     const proteinKey = entry ? (entry.uniprot || entry.gene || '__unknown__') : null;
     removeFromSummary(id);
+    // 同步删除对应的提取历史缓存（防止重新分析时又加载到旧数据）
+    if (entry) {
+      deleteArticleExtractionForEntry(entry);
+    }
     if (proteinKey) {
       const remaining = loadSummary();
       const stillExists = remaining.some((e) => (e.uniprot || e.gene || '__unknown__') === proteinKey);
@@ -317,6 +322,9 @@ export function ArticleSummaryPage() {
   const getSummary = (entry: SummaryEntry, col: (typeof COLUMNS)[0]) => {
     const s = entry.extraction.summaries?.[col.key];
     if (s) return stripMarkdown(s);
+    // 旧缓存兜底：summaries 缺失时从板块内容摘出「关键摘要」行文本
+    const legacy = extractSummaryLine(entry.extraction[col.key]);
+    if (legacy) return stripMarkdown(legacy);
     const text = stripMarkdown(stripSummaryLines(entry.extraction[col.key]));
     return text.length > 100 ? text.slice(0, 100) + '...' : text;
   };
